@@ -1,0 +1,53 @@
+{
+  "name": "news-catch",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.5.2",
+  "description": "News catching system based on NewsNow for real-time news scraping and local storage",
+  "scripts": {
+    "dev": "npm run presource && tsx server/app.ts",
+    "build": "npm run presource && vite build",
+    "start": "node --env-file .env.server dist/server.mjs",
+    "presource": "tsx ./scripts/source.ts",
+    "init-sources": "tsx ./scripts/init-sources.ts",
+    "demo": "tsx ./scripts/demo.ts",
+    "verify": "tsx ./scripts/verify-setup.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "docker:build": "docker build -t news-catch .",
+    "docker:run": "docker-compose up -d",
+    "docker:stop": "docker-compose down"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.11.0",
+    "better-sqlite3": "^11.10.0",
+    "cheerio": "^1.0.0",
+    "clsx": "^2.1.1",
+    "consola": "^3.4.0",
+    "dayjs": "1.11.13",
+    "db0": "^0.3.1",
+    "defu": "^6.1.4",
+    "fast-xml-parser": "^5.0.8",
+    "h3": "^1.15.1",
+    "iconv-lite": "^0.6.3",
+    "md5": "^2.3.0",
+    "ofetch": "^1.4.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/md5": "^2.3.5",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react-swc": "^3.8.0",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.4.7",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.0",
+    "vitest": "^3.0.7"
+  }
+}

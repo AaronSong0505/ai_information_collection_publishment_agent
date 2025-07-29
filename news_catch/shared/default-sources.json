@@ -1,0 +1,30 @@
+{
+  "hackernews": {
+    "name": "Hacker News",
+    "type": "html",
+    "url": "https://news.ycombinator.com",
+    "interval": 300,
+    "enabled": true,
+    "config": {
+      "selectors": {
+        "title": ".titleline a",
+        "link": ".titleline a",
+        "date": ".age"
+      }
+    }
+  },
+  "github": {
+    "name": "GitHub Trending",
+    "type": "html",
+    "url": "https://github.com/trending",
+    "interval": 600,
+    "enabled": true,
+    "config": {
+      "selectors": {
+        "title": "h2 a",
+        "link": "h2 a",
+        "content": "p"
+      }
+    }
+  }
+}
