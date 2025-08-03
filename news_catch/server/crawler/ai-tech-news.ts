@@ -93,6 +93,7 @@ export class AITechNewsCrawler {
         const itemUrl = $a.attr("href")
         const title = $a.text().trim()
         const relativeDate = $el.find(".time").text()
+        const description = $el.find(".brief").text().trim() // 获取描述信息
         
         if (itemUrl && title && relativeDate) {
           // 过滤 AI 相关内容
@@ -103,7 +104,7 @@ export class AITechNewsCrawler {
               id: itemUrl,
               source: '36kr',
               pubDate: new Date().toISOString(), // 使用当前时间作为发布时间
-              content: `${title} - 来自36氪的最新科技资讯报道。`
+              content: description || `${title} - 来自36氪的最新科技资讯报道。` // 使用描述信息
             })
           }
         }
@@ -387,18 +388,21 @@ export class AITechNewsCrawler {
       
       const html = await myFetch(url, { timeout: 15000 })
       const $ = cheerio.load(html)
-      const images: ImageInfo[] = []
       
-      // 查找文章内容中的图片
+      // 移除不需要的元素
+      $('script, style, nav, header, footer, .advertisement, .ads, .social-share, .comment').remove()
+      
+      // 尝试多种常见的图片选择器
       const imgSelectors = [
-        'article img',
-        '.article-content img',
-        '.post-content img',
-        '.content img',
-        'main img',
-        '.story-body img'
+        'article img',           // 文章中的图片
+        '.content img',          // 内容区域的图片
+        '.post-content img',     // 文章内容中的图片
+        '.article-body img',     // 文章正文中的图片
+        'main img',              // 主要内容中的图片
+        'img',                   // 所有图片（备选）
       ]
       
+      const images: ImageInfo[] = []
       const foundImages = new Set<string>() // 去重
       
       for (const selector of imgSelectors) {
@@ -445,7 +449,7 @@ export class AITechNewsCrawler {
         if (images.length >= 5) break // 限制图片数量
       }
       
-      // 下载图片
+      // 只有在找到图片时才下载它们
       if (images.length > 0) {
         const articleId = this.generateArticleId(title)
         const processedImages = await this.imageHandler.processImages(images, articleId)

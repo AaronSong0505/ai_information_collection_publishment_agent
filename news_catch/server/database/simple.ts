@@ -62,18 +62,18 @@ export class SimpleDatabase {
     }
   }
 
-  private async saveData() {
+  private async saveData(): Promise<void> {
     try {
       // 保存文章数据
-      const articlesArray = Array.from(articles.entries()).map(([id, article]) => ({
-        id,
-        ...article
+      const articlesArray = Array.from(articles.values()).map(article => ({
+        ...article,
+        publishTime: article.publishTime.toISOString()
       }))
-      await fs.writeFile(ARTICLES_FILE, JSON.stringify(articlesArray, null, 2))
+      await fs.writeFile(ARTICLES_FILE, JSON.stringify(articlesArray, null, 2), 'utf-8')
 
       // 保存新闻源数据
       const sourcesArray = Array.from(sources.values())
-      await fs.writeFile(SOURCES_FILE, JSON.stringify(sourcesArray, null, 2))
+      await fs.writeFile(SOURCES_FILE, JSON.stringify(sourcesArray, null, 2), 'utf-8')
     } catch (error) {
       logger.error('Error saving data:', error)
     }

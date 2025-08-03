@@ -44,6 +44,59 @@ node start-ai-news.js
 - **[docs/QUICKSTART.md](./docs/QUICKSTART.md)** - ⚡ 快速启动指南
 - **[docs/WINDOWS_QUICKSTART.md](./docs/WINDOWS_QUICKSTART.md)** - 💻 Windows 用户指南
 
+## 开发环境设置
+
+### 必需条件
+- Node.js v18+
+- pnpm (通过 npm 安装)
+
+### 安装步骤
+
+```bash
+# 1. 克隆项目 (已完成)
+# 2. 进入项目目录
+cd news_catch
+
+# 3. 安装 pnpm (如果尚未安装)
+npm install -g pnpm
+
+# 4. 安装项目依赖
+pnpm install
+
+# 5. 初始化数据源
+pnpm run presource
+
+# 6. 运行开发服务器
+pnpm run dev
+```
+
+或者使用 npx 运行:
+
+```bash
+# 1. 安装依赖
+npx pnpm install
+
+# 2. 初始化数据源
+npx pnpm run presource
+
+# 3. 运行开发服务器
+npx pnpm run dev
+```
+
+### 测试 AI 爬虫
+
+```bash
+# 运行 AI 新闻爬虫测试
+npx tsx test-ai-crawler.js
+```
+
+### 启动生产服务器
+
+```bash
+pnpm run build
+pnpm start
+```
+
 ## 快速开始
 
 ### 安装依赖

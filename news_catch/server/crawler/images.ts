@@ -13,13 +13,20 @@ export class ImageHandler {
   }
 
   async processImages(images: ImageInfo[], articleId: string): Promise<ImageInfo[]> {
+    // 如果没有图片要处理，直接返回空数组，不创建文件夹
+    if (!images || images.length === 0) {
+      return []
+    }
+
     const processedImages: ImageInfo[] = []
+    let successCount = 0
 
     for (const image of images) {
       try {
         const processedImage = await this.downloadImage(image.originalUrl, articleId)
         if (processedImage) {
           processedImages.push(processedImage)
+          successCount++
         }
       } catch (error) {
         logger.warn(`Failed to process image ${image.originalUrl}:`, error)
@@ -29,6 +36,20 @@ export class ImageHandler {
           localPath: '',
           size: 0,
         })
+      }
+    }
+
+    // 如果没有成功下载任何图片，删除创建的文件夹
+    if (successCount === 0) {
+      try {
+        const articleDir = join(this.baseDir, articleId)
+        // 只有当目录存在且为空时才删除
+        const files = await fs.readdir(articleDir)
+        if (files.length === 0) {
+          await fs.rmdir(articleDir)
+        }
+      } catch (error) {
+        // 忽略删除目录时的错误
       }
     }
 
@@ -56,6 +77,13 @@ export class ImageHandler {
       })
 
       const buffer = Buffer.from(response)
+      
+      // 验证是否是有效的图片数据
+      if (!this.isValidImage(buffer, format)) {
+        logger.warn(`Invalid image data for ${url}`)
+        return null
+      }
+      
       await fs.writeFile(localPath, buffer)
 
       // Get image dimensions (basic implementation)
@@ -71,10 +99,10 @@ export class ImageHandler {
         height,
       }
 
-      logger.success(`Image downloaded: ${filename}`)
+      logger.success(`Image downloaded: ${filename} (${buffer.length} bytes)`)
       return imageInfo
     } catch (error) {
-      logger.error(`Failed to download image ${url}:`, error)
+      logger.error(`Failed to download image ${url}:`, error.message)
       return null
     }
   }
@@ -166,6 +194,47 @@ export class ImageHandler {
     
     return files
   }
+
+  private isValidImage(buffer: Buffer, format: string): boolean {
+    // Check if buffer has content
+    if (!buffer || buffer.length === 0) {
+      return false
+    }
+
+    // Check minimum size (at least 100 bytes for a valid image)
+    if (buffer.length < 100) {
+      return false
+    }
+
+    // Basic format validation
+    switch (format.toLowerCase()) {
+      case 'png':
+        // PNG signature: 89 50 4E 47 0D 0A 1A 0A
+        return buffer.length > 8 && 
+               buffer[0] === 0x89 && buffer[1] === 0x50 && 
+               buffer[2] === 0x4E && buffer[3] === 0x47 &&
+               buffer[4] === 0x0D && buffer[5] === 0x0A &&
+               buffer[6] === 0x1A && buffer[7] === 0x0A
+               
+      case 'jpg':
+      case 'jpeg':
+        // JPEG signature: FF D8 FF
+        return buffer.length > 3 &&
+               buffer[0] === 0xFF && buffer[1] === 0xD8 &&
+               buffer[2] === 0xFF
+               
+      case 'gif':
+        // GIF signature: 47 49 46 38
+        return buffer.length > 4 &&
+               buffer[0] === 0x47 && buffer[1] === 0x49 &&
+               buffer[2] === 0x46 && buffer[3] === 0x38
+               
+      default:
+        // For other formats, just check size
+        return buffer.length >= 100
+    }
+  }
+
 }
 
 export default ImageHandler
