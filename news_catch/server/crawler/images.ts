@@ -151,17 +151,20 @@ export class ImageHandler {
   }
 
   private async getImageDimensions(buffer: Buffer, format: string): Promise<{ width?: number; height?: number }> {
-    // Basic image dimension detection
-    // In a production environment, you'd use a proper image processing library
+    // 更完善的图像尺寸检测
     try {
       if (format === 'png' && buffer.length > 24) {
         const width = buffer.readUInt32BE(16)
         const height = buffer.readUInt32BE(20)
         return { width, height }
       } else if ((format === 'jpg' || format === 'jpeg') && buffer.length > 4) {
-        // Basic JPEG dimension detection would be more complex
-        // For now, return undefined to indicate unknown dimensions
+        // 简化的JPEG尺寸检测
+        // 实际项目中建议使用专门的图像处理库如sharp
         return {}
+      } else if (format === 'gif' && buffer.length > 10) {
+        const width = buffer.readUInt16LE(6)
+        const height = buffer.readUInt16LE(8)
+        return { width, height }
       }
     } catch (error) {
       logger.warn('Failed to get image dimensions:', error)
@@ -206,7 +209,7 @@ export class ImageHandler {
       return false
     }
 
-    // Basic format validation
+    // 更宽松的格式验证，以适应不同来源的图片
     switch (format.toLowerCase()) {
       case 'png':
         // PNG signature: 89 50 4E 47 0D 0A 1A 0A
@@ -229,9 +232,24 @@ export class ImageHandler {
                buffer[0] === 0x47 && buffer[1] === 0x49 &&
                buffer[2] === 0x46 && buffer[3] === 0x38
                
+      case 'webp':
+        // WebP signature: 52 49 46 46 XX XX XX XX 57 45 42 50
+        return buffer.length > 12 &&
+               buffer[0] === 0x52 && buffer[1] === 0x49 && 
+               buffer[2] === 0x46 && buffer[3] === 0x46 &&
+               buffer[8] === 0x57 && buffer[9] === 0x45 && 
+               buffer[10] === 0x42 && buffer[11] === 0x50
+               
       default:
-        // For other formats, just check size
-        return buffer.length >= 100
+        // 对于其他格式或无法识别的格式，采用更宽松的验证
+        // 检查是否包含常见的图像特征
+        return buffer.length >= 100 && (
+          // 检查是否可能包含图像数据的特征
+          (buffer[0] === 0xFF && buffer[1] === 0xD8) || // JPEG
+          (buffer[0] === 0x89 && buffer[1] === 0x50) || // PNG
+          (buffer[0] === 0x47 && buffer[1] === 0x49) || // GIF
+          (buffer[0] === 0x52 && buffer[1] === 0x49)    // WebP
+        )
     }
   }
 

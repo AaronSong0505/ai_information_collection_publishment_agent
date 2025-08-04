@@ -4,11 +4,15 @@ import { getSimpleDatabase } from '../database/simple.js'
 import { generateContentHash } from '../utils/hash.js'
 import myFetch from '../utils/fetch.js'
 import logger from '../utils/logger.js'
-import { fetchArticleContent } from './content-fetcher.js'
+import { fetchArticleContent, ContentImage } from './content-fetcher.ts'
 import ImageHandler from './images.js'
 import type { ImageInfo } from '../../shared/types.js'
 
-const MAX_ARTICLES = 10 // 开发阶段限制
+const MAX_ARTICLES = 20 // 增加到20篇文章
+
+interface AINewsCrawlerOptions {
+  onComplete?: () => void
+}
 
 export class AITechNewsCrawler {
   private db = getSimpleDatabase()
@@ -21,55 +25,40 @@ export class AITechNewsCrawler {
     logger.info('🤖 启动 AI 技术新闻爬虫...')
     logger.info(`📊 限制: 最多抓取 ${MAX_ARTICLES} 篇完整文章`)
     logger.info('🎯 专注: AI 技术、科技新闻、创业资讯')
+    logger.info(`📊 当前已有 ${this.articleCount} 篇文章，还可抓取 ${MAX_ARTICLES - this.articleCount} 篇`)
     
     try {
-      // 检查现有文章数量
-      const existingArticles = await this.db.searchArticles({ limit: 100, offset: 0 })
-      this.articleCount = existingArticles.total
+      // 国内主要AI新闻源
+      await this.crawl36Kr()           // 36氪 - 创业和科技资讯
+      await sleep(2000) // 延迟2秒避免请求过于频繁
+      await this.crawlITHome()         // IT之家 - 科技新闻
+      await sleep(2000)
+      await this.crawlJuejin()         // 掘金 - 技术文章
+      await sleep(2000)
+      await this.crawlSolidot()        // Solidot - 开源技术新闻
+      await sleep(2000)
+      await this.crawlSSPai()          // 少数派 - 科技生活资讯
+      await sleep(2000)
       
-      if (this.articleCount >= MAX_ARTICLES) {
-        logger.warn(`⚠️ 已达到文章数量限制 (${this.articleCount}/${MAX_ARTICLES})，停止抓取`)
-        return
-      }
+      // 国内专业AI媒体
+      await this.crawlJiqizhixin()     // 机器之心 - AI技术和产业媒体
+      await sleep(2000)
+      await this.crawlLeiphone()       // 雷锋网 - AI科技媒体
+      await sleep(2000)
       
-      logger.info(`📊 当前已有 ${this.articleCount} 篇文章，还可抓取 ${MAX_ARTICLES - this.articleCount} 篇`)
-
-      // 抓取各个 AI 技术新闻源
-      await this.crawl36Kr()
-      await this.sleep(2000)
+      // 国际AI新闻源
+      await this.crawlTechCrunchAI()   // TechCrunch AI - 国际科技媒体AI频道
+      await sleep(2000)
+      await this.crawlMITTechReview()  // MIT Technology Review - 顶级科技评论媒体
       
-      if (!this.shouldStop && this.articleCount < MAX_ARTICLES) {
-        await this.crawlITHome()
-        await this.sleep(2000)
-      }
-      
-      if (!this.shouldStop && this.articleCount < MAX_ARTICLES) {
-        await this.crawlJuejin()
-        await this.sleep(2000)
-      }
-      
-      if (!this.shouldStop && this.articleCount < MAX_ARTICLES) {
-        await this.crawlSolidot()
-        await this.sleep(2000)
-      }
-      
-      if (!this.shouldStop && this.articleCount < MAX_ARTICLES) {
-        await this.crawlSSPai()
-        await this.sleep(2000)
-      }
-      
-      logger.success(`🎉 抓取完成！总共处理了 ${this.articleCount} 篇文章`)
-      
-      // 如果达到限制，触发完成回调
-      if (this.articleCount >= MAX_ARTICLES && this.onComplete) {
-        logger.info('🛑 达到文章数量限制，准备停止服务...')
-        setTimeout(() => {
-          this.onComplete?.()
-        }, 2000)
-      }
-      
+      logger.info(`🎉 爬虫完成，总共抓取 ${this.articleCount} 篇文章`)
     } catch (error) {
-      logger.error('❌ 抓取过程出错:', error)
+      logger.error('❌ 爬虫过程中出现错误:', error)
+    } finally {
+      this.isRunning = false
+      if (this.onComplete) {
+        this.onComplete()
+      }
     }
   }
 
@@ -271,19 +260,270 @@ export class AITechNewsCrawler {
     }
   }
 
+  // 机器之心 - AI技术和产业媒体
+  private async crawlJiqizhixin(): Promise<void> {
+    if (this.articleCount >= MAX_ARTICLES) return
+    
+    logger.info('📡 抓取 机器之心 AI 技术资讯...')
+    
+    try {
+      const response = await myFetch("https://www.jiqizhixin.com/", { timeout: 15000 })
+      const $ = cheerio.load(response)
+      const items: any[] = []
+      
+      const $items = $("article.article-item, .content-item, .article-content-item")
+      $items.each((_, el) => {
+        const $el = $(el)
+        const $a = $el.find("h3 a, .article-title a, .content-item-title a").first()
+        const title = $a.text().trim()
+        const url = $a.attr("href")
+        
+        if (url && title) {
+          // 处理相对链接
+          const fullUrl = url.startsWith('http') ? url : `https://www.jiqizhixin.com${url}`
+          
+          // 过滤 AI 相关内容
+          if (this.isAIRelated(title)) {
+            items.push({
+              url: fullUrl,
+              title,
+              id: fullUrl,
+              source: '机器之心',
+              pubDate: new Date().toISOString(),
+              content: `${title} - 来自机器之心的最新AI技术资讯报道。`
+            })
+          }
+        }
+      })
+      
+      await this.processItems(items.slice(0, 3), '机器之心')
+      
+    } catch (error) {
+      logger.error('❌ 机器之心抓取失败:', error.message)
+    }
+  }
+
+  // 雷锋网 - AI科技媒体
+  private async crawlLeiphone(): Promise<void> {
+    if (this.articleCount >= MAX_ARTICLES) return
+    
+    logger.info('📡 抓取 雷锋网 AI 科技资讯...')
+    
+    try {
+      const response = await myFetch("https://www.leiphone.com/", { timeout: 15000 })
+      const $ = cheerio.load(response)
+      const items: any[] = []
+      
+      const $items = $(".word > h3 > a, .list-text-cont > h3 > a, .article-item h3 a")
+      $items.each((_, el) => {
+        const $el = $(el)
+        const title = $el.text().trim()
+        const url = $el.attr("href")
+        
+        if (url && title) {
+          // 处理相对链接
+          const fullUrl = url.startsWith('http') ? url : `https://www.leiphone.com${url}`
+          
+          // 过滤 AI 相关内容
+          if (this.isAIRelated(title)) {
+            items.push({
+              url: fullUrl,
+              title,
+              id: fullUrl,
+              source: '雷锋网',
+              pubDate: new Date().toISOString(),
+              content: `${title} - 来自雷锋网的最新AI科技资讯报道。`
+            })
+          }
+        }
+      })
+      
+      await this.processItems(items.slice(0, 3), '雷锋网')
+      
+    } catch (error) {
+      logger.error('❌ 雷锋网抓取失败:', error.message)
+    }
+  }
+
+  // TechCrunch AI - 国际科技媒体AI频道
+  private async crawlTechCrunchAI(): Promise<void> {
+    if (this.articleCount >= MAX_ARTICLES) return
+    
+    logger.info('📡 抓取 TechCrunch AI 国际资讯...')
+    
+    try {
+      const response = await myFetch("https://techcrunch.com/category/artificial-intelligence/", { timeout: 15000 })
+      const $ = cheerio.load(response)
+      const items: any[] = []
+      
+      const $items = $("h2.post-block__title a, .post-block h3 a")
+      $items.each((_, el) => {
+        const $el = $(el)
+        const title = $el.text().trim()
+        const url = $el.attr("href")
+        
+        if (url && title) {
+          // 过滤 AI 相关内容
+          if (this.isAIRelated(title)) {
+            items.push({
+              url,
+              title,
+              id: url,
+              source: 'TechCrunch',
+              pubDate: new Date().toISOString(),
+              content: `${title} - 来自TechCrunch的最新国际AI技术资讯报道。`
+            })
+          }
+        }
+      })
+      
+      await this.processItems(items.slice(0, 3), 'TechCrunch')
+      
+    } catch (error) {
+      logger.error('❌ TechCrunch AI 抓取失败:', error.message)
+    }
+  }
+
+  // MIT Technology Review - 顶级科技评论媒体
+  private async crawlMITTechReview(): Promise<void> {
+    if (this.articleCount >= MAX_ARTICLES) return
+    
+    logger.info('📡 抓取 MIT Technology Review 科技资讯...')
+    
+    try {
+      const response = await myFetch("https://www.technologyreview.com/topic/artificial-intelligence/", { timeout: 15000 })
+      const $ = cheerio.load(response)
+      const items: any[] = []
+      
+      const $items = $("h3 a, .storyTitle a, .story-title a")
+      $items.each((_, el) => {
+        const $el = $(el)
+        const title = $el.text().trim()
+        const url = $el.attr("href")
+        
+        if (url && title) {
+          // 处理相对链接
+          const fullUrl = url.startsWith('http') ? url : `https://www.technologyreview.com${url}`
+          
+          // 过滤 AI 相关内容
+          if (this.isAIRelated(title)) {
+            items.push({
+              url: fullUrl,
+              title,
+              id: fullUrl,
+              source: 'MIT Tech Review',
+              pubDate: new Date().toISOString(),
+              content: `${title} - 来自MIT Technology Review的顶级科技评论报道。`
+            })
+          }
+        }
+      })
+      
+      await this.processItems(items.slice(0, 3), 'MIT Tech Review')
+      
+    } catch (error) {
+      logger.error('❌ MIT Technology Review 抓取失败:', error.message)
+    }
+  }
+
   // 判断是否为 AI 相关内容
-  private isAIRelated(title: string): boolean {
+  private isAIRelated(text: string): boolean {
     const aiKeywords = [
-      'AI', 'ai', '人工智能', '机器学习', '深度学习', 'ChatGPT', 'GPT', 'OpenAI',
-      '大模型', 'LLM', '神经网络', '算法', 'TensorFlow', 'PyTorch', '自动驾驶',
-      '计算机视觉', 'NLP', '自然语言', 'Transformer', 'BERT', '语言模型',
-      '智能', '自动化', '机器人', 'ML', 'DL', '数据科学', '预测', '识别',
-      'Claude', 'Gemini', 'Llama', '文心', '通义', '智谱', '百川', '讯飞',
-      '科技', '技术', '创新', '研发', '算力', '芯片', 'GPU', 'NVIDIA', 'AMD',
-      '云计算', '边缘计算', '量子', '区块链', '元宇宙', 'VR', 'AR', 'XR'
+      // 核心AI术语
+      'AI', 'ai', '人工智能', '机器学习', '深度学习', '神经网络', '算法',
+      'ChatGPT', 'GPT', 'OpenAI', '大模型', 'LLM', '语言模型', '生成式',
+      'Transformer', 'BERT', 'NLP', '自然语言处理', '计算机视觉', 'CV',
+      'TensorFlow', 'PyTorch', 'Keras', 'Scikit-learn',
+      
+      // AI技术和方法
+      '强化学习', '迁移学习', '监督学习', '无监督学习', '自监督学习',
+      '联邦学习', '边缘计算', '云计算', '模型训练', '模型推理',
+      '模型优化', '模型压缩', '模型蒸馏', '参数优化',
+      
+      // 国内外知名AI公司和产品
+      'Claude', 'Gemini', 'Llama', '文心一言', '通义千问', '智谱清言',
+      '百川智能', '讯飞星火', '商汤科技', '旷视科技', '云从科技',
+      '出门问问', '第四范式', '依图科技', 'NVIDIA', 'AMD', 'Intel',
+      'Google AI', 'Microsoft AI', 'Amazon AI', 'Meta AI', 'Apple AI',
+      
+      // AI应用领域 - 医疗健康
+      '医疗AI', '医学影像', '药物研发', '基因测序', '智能诊断', '远程医疗',
+      '健康管理', '辅助诊疗', '病理分析', '影像识别', '疾病预测',
+      
+      // AI应用领域 - 金融科技
+      '金融AI', '智能投顾', '风险控制', '欺诈检测', '量化交易', '区块链金融',
+      '信用评估', '保险科技', '支付科技', '数字货币', '算法交易',
+      
+      // AI应用领域 - 教育培训
+      '教育AI', '智能教学', '个性化学习', '在线教育', '虚拟导师', '智能辅导',
+      '学习分析', '教育机器人', '自适应学习', '智能评测',
+      
+      // AI应用领域 - 智能制造
+      '工业AI', '智能制造', '工业4.0', '预测性维护', '质量控制', '供应链优化',
+      '机器人自动化', '智能仓储', '数字孪生', '工业机器人',
+      
+      // AI应用领域 - 智慧城市
+      '智慧城市', '智能交通', '环境监测', '城市大脑', '公共安全', '智能安防',
+      '智能照明', '智慧能源', '城市规划', '应急管理',
+      
+      // AI应用领域 - 零售电商
+      '零售AI', '智能推荐', '个性化营销', '智能客服', '无人零售', '库存管理',
+      '价格优化', '需求预测', '购物体验', '虚拟试衣',
+      
+      // AI应用领域 - 交通出行
+      '交通AI', '自动驾驶', '智能交通', '路径规划', '车联网', '智慧停车',
+      '共享出行', '物流优化', '智能导航', '交通预测',
+      
+      // AI应用领域 - 农业科技
+      '农业AI', '精准农业', '智能灌溉', '作物监测', '农业机器人', '病虫害识别',
+      '产量预测', '土壤分析', '智能农机', '智慧农场',
+      
+      // AI应用领域 - 能源环保
+      '能源AI', '智能电网', '能源管理', '可再生能源', '碳中和', '环境监测',
+      '气候预测', '节能减排', '智能建筑', '绿色能源',
+      
+      // AI应用领域 - 媒体娱乐
+      '媒体AI', '内容生成', '智能剪辑', '虚拟主播', '游戏AI', '音乐生成',
+      '视频分析', '内容推荐', '数字人', '虚拟现实',
+      
+      // AI应用领域 - 法律服务
+      '法律AI', '智能法务', '合同审查', '案件预测', '法律咨询', '合规管理',
+      '文书生成', '类案推送', '量刑辅助', '司法大数据',
+      
+      // AI应用领域 - 人力资源
+      'HR AI', '智能招聘', '人才评估', '员工关怀', '绩效管理', '组织诊断',
+      '员工培训', '离职预测', '薪酬优化', '团队协作',
+      
+      // AI应用领域 - 公共安全
+      '安防AI', '人脸识别', '行为分析', '智能监控', '威胁识别', '反恐预警',
+      '网络安全', '数据安全', '入侵检测', '风险评估',
+      
+      // AI应用领域 - 物流运输
+      '物流AI', '路径优化', '仓储管理', '包裹追踪', '智能分拣', '运输调度',
+      '车队管理', '配送优化', '库存优化', '供应链可视化',
+      
+      // AI应用领域 - 房地产
+      '房地产AI', '智能估价', '空间规划', '建筑设计', '物业管理', '智能家居',
+      '房产推荐', '租赁管理', '设施管理', '能耗优化',
+      
+      // AI应用领域 - 旅游服务
+      '旅游AI', '智能推荐', '行程规划', '景点识别', '语音导览', '智能翻译',
+      '酒店管理', '客户服务', '风险预警', '个性化体验',
+      
+      // AI应用领域 - 游戏娱乐
+      '游戏AI', 'NPC行为', '关卡生成', '平衡调整', '玩家匹配', '作弊检测',
+      '沉浸体验', '虚拟世界', '互动叙事', '智能对手',
+      
+      // AI应用领域 - 通信技术
+      '通信AI', '网络优化', '信号处理', '频谱管理', '故障诊断', '容量规划',
+      '智能运维', '用户体验', '网络安全', '5G优化',
+      
+      // AI应用领域 - 科学研究
+      '科研AI', '数据分析', '模式识别', '科学计算', '实验设计', '文献挖掘',
+      '假说验证', '知识图谱', '智能发现', '仿真建模'
     ]
     
-    return aiKeywords.some(keyword => title.includes(keyword))
+    return aiKeywords.some(keyword => text.includes(keyword))
   }
 
   private async processItems(items: any[], sourceName: string): Promise<void> {
@@ -344,7 +584,7 @@ export class AITechNewsCrawler {
     try {
       logger.info(`🔍 抓取完整内容: ${item.title.substring(0, 50)}...`)
       
-      // 抓取完整文章内容
+      // 抓取完整文章内容（包括图像占位符）
       const fullContent = await fetchArticleContent(
         item.url, 
         item.title, 
@@ -390,27 +630,58 @@ export class AITechNewsCrawler {
       const $ = cheerio.load(html)
       
       // 移除不需要的元素
-      $('script, style, nav, header, footer, .advertisement, .ads, .social-share, .comment').remove()
+      $('script, style, nav, header, footer, .advertisement, .ads, .social-share, .comment, .sidebar, .related-article, .breadcrumb, .tags, .meta').remove()
       
-      // 尝试多种常见的图片选择器
-      const imgSelectors = [
-        'article img',           // 文章中的图片
-        '.content img',          // 内容区域的图片
-        '.post-content img',     // 文章内容中的图片
-        '.article-body img',     // 文章正文中的图片
-        'main img',              // 主要内容中的图片
-        'img',                   // 所有图片（备选）
+      // 尝试多种常见的内容选择器来定位正文区域
+      const contentSelectors = [
+        'article .content',  // 36氪等网站
+        '.article-content',
+        '.post-content', 
+        '.entry-content',
+        '.content',
+        'article',
+        'main',
+        '.story-body',
+        '.article-body',
+        '.post-body',
+        '.rich_media_content',  // 微信公众号
+        '#article-content',     // 通用ID选择器
+        '.post-content .text',  // 一些博客平台
+        '.article-main',        // 一些新闻网站
+        '.news-content',        // 新闻内容类
+        '.content-main',        // 主内容区域
+        '.g-content',           // 一些网站的内容类
+        '.detail-content',      // 详情页内容
+        '.article-detail',      // 文章详情
+        '.post_article',        // 另一种文章容器
+        '.post-body-content'    // 另一种内容容器
       ]
       
-      const images: ImageInfo[] = []
-      const foundImages = new Set<string>() // 去重
+      let contentElement = null
+      for (const selector of contentSelectors) {
+        const element = $(selector).first()
+        if (element.length > 0) {
+          // 检查元素是否包含足够的文本内容
+          const textContent = element.text().trim()
+          if (textContent.length > 100) {
+            contentElement = element
+            break
+          }
+        }
+      }
       
-      for (const selector of imgSelectors) {
-        $(selector).each((index, element) => {
+      const images: ImageInfo[] = []
+      
+      // 如果找到了正文区域，只提取正文中的图片
+      if (contentElement) {
+        logger.info('🔍 在正文区域中查找图片...')
+        // 查找正文中的图片
+        contentElement.find('img').each((index, element) => {
           const $img = $(element)
           let imgSrc = $img.attr('src') || $img.attr('data-src') || $img.attr('data-original')
+          const alt = $img.attr('alt') || ''
           
-          if (imgSrc && !foundImages.has(imgSrc)) {
+          if (imgSrc) {
             // 处理相对路径
             if (imgSrc.startsWith('//')) {
               imgSrc = 'https:' + imgSrc
@@ -421,40 +692,105 @@ export class AITechNewsCrawler {
               imgSrc = new URL(imgSrc, url).href
             }
             
-            // 过滤掉太小的图片和广告图片
-            const width = parseInt($img.attr('width') || '0')
-            const height = parseInt($img.attr('height') || '0')
-            const alt = $img.attr('alt') || ''
-            
-            // 跳过明显的广告或装饰图片
-            if (alt.includes('广告') || alt.includes('ad') || 
-                imgSrc.includes('ad') || imgSrc.includes('banner') ||
-                (width > 0 && height > 0 && (width < 100 || height < 100))) {
-              return
+            // 过滤掉明显不是内容图片的图片
+            if (!imgSrc.includes('ad') && !imgSrc.includes('banner') && !imgSrc.includes('tracking') && 
+                !imgSrc.includes('/t.png') && // IT之家的追踪像素
+                !alt.includes('广告') && !alt.includes('ad') &&
+                !imgSrc.includes('pixel') && !imgSrc.includes('blank')) {
+              logger.info(`🖼️ 找到正文图片: ${imgSrc.substring(0, 100)}...`)
+              images.push({
+                id: `img-${Date.now()}-${index}`,
+                originalUrl: imgSrc,
+                localPath: '',
+                format: this.getImageFormat(imgSrc),
+                size: 0,
+                width: undefined,
+                height: undefined
+              })
+            } else {
+              logger.info(`🗑️ 过滤非正文图片: ${imgSrc.substring(0, 100)}...`)
             }
-            
-            foundImages.add(imgSrc)
-            images.push({
-              id: `img-${Date.now()}-${index}`,
-              originalUrl: imgSrc,
-              localPath: '',
-              format: this.getImageFormat(imgSrc),
-              size: 0,
-              width: width > 0 ? width : undefined,
-              height: height > 0 ? height : undefined
-            })
           }
         })
+      } else {
+        logger.info('⚠️ 未找到正文区域，使用通用图片提取方法...')
+        // 如果没找到正文区域，使用原来的通用方法
+        const imgSelectors = [
+          'article img',
+          '.article-content img',
+          '.post-content img',
+          '.content img',
+          'main img',
+          '.story-body img'
+        ]
         
-        if (images.length >= 5) break // 限制图片数量
+        const foundImages = new Set<string>() // 去重
+        
+        for (const selector of imgSelectors) {
+          $(selector).each((index, element) => {
+            const $img = $(element)
+            let imgSrc = $img.attr('src') || $img.attr('data-src') || $img.attr('data-original')
+            
+            if (imgSrc && !foundImages.has(imgSrc)) {
+              // 处理相对路径
+              if (imgSrc.startsWith('//')) {
+                imgSrc = 'https:' + imgSrc
+              } else if (imgSrc.startsWith('/')) {
+                const baseUrl = new URL(url)
+                imgSrc = baseUrl.origin + imgSrc
+              } else if (!imgSrc.startsWith('http')) {
+                imgSrc = new URL(imgSrc, url).href
+              }
+              
+              // 过滤掉太小的图片和广告图片
+              const width = parseInt($img.attr('width') || '0')
+              const height = parseInt($img.attr('height') || '0')
+              const alt = $img.attr('alt') || ''
+              
+              // 跳过明显的广告或装饰图片
+              if (alt.includes('广告') || alt.includes('ad') || 
+                  imgSrc.includes('ad') || imgSrc.includes('banner') ||
+                  imgSrc.includes('/t.png') || // IT之家的追踪像素
+                  imgSrc.includes('tracking') || imgSrc.includes('pixel') ||
+                  (width > 0 && height > 0 && (width < 100 || height < 100)) ||
+                  (width === 1 && height === 1)) { // 1x1 追踪像素
+                logger.info(`🗑️ 过滤广告或追踪图片: ${imgSrc.substring(0, 100)}...`)
+                return
+              }
+              
+              foundImages.add(imgSrc)
+              images.push({
+                id: `img-${Date.now()}-${index}`,
+                originalUrl: imgSrc,
+                localPath: '',
+                format: this.getImageFormat(imgSrc),
+                size: 0,
+                width: width > 0 ? width : undefined,
+                height: height > 0 ? height : undefined
+              })
+            }
+          })
+          
+          if (images.length >= 5) break // 限制图片数量
+        }
       }
       
-      // 只有在找到图片时才下载它们
+      // 下载图片
       if (images.length > 0) {
         const articleId = this.generateArticleId(title)
         const processedImages = await this.imageHandler.processImages(images, articleId)
-        logger.success(`🖼️ 图片处理完成: ${processedImages.length}/${images.length} 张图片`)
-        return processedImages
+        
+        // 过滤掉太小的图片（可能是追踪像素）
+        const validImages = processedImages.filter(img => {
+          if (img.size && img.size < 1000) { // 小于 1KB 的图片可能是追踪像素
+            logger.warn(`⚠️ 过滤小图片: ${img.originalUrl} (${img.size} bytes)`)
+            return false
+          }
+          return true
+        })
+        
+        logger.success(`🖼️ 图片处理完成: ${validImages.length}/${images.length} 张有效图片`)
+        return validImages
       }
       
       return []
@@ -530,4 +866,9 @@ export function getAITechNewsCrawler(): AITechNewsCrawler {
     crawlerInstance = new AITechNewsCrawler()
   }
   return crawlerInstance
+}
+
+// 添加sleep函数定义
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
