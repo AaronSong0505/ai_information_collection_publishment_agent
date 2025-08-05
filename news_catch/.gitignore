@@ -13,9 +13,7 @@ build/
 .env.production
 
 # Database
-data/
-*.db
-*.sqlite
+data/images/
 
 # Logs
 logs/

@@ -2,6 +2,7 @@ import * as cheerio from 'cheerio'
 import myFetch from '../utils/fetch.js'
 import logger from '../utils/logger.js'
 import { generateContentHash } from '../utils/hash.js'
+import type { ImageInfo } from '../../shared/types.js'
 
 export interface ArticleContent {
   title: string
@@ -13,7 +14,17 @@ export interface ArticleContent {
   hash: string
 }
 
-export async function fetchArticleContent(url: string, title: string, description: string, source: string): Promise<ArticleContent | null> {
+export interface ContentImage {
+  id: string
+  originalUrl: string
+  localPath: string
+  format: string
+  size: number
+  width?: number
+  height?: number
+}
+
+export async function fetchArticleContent(url: string, title: string, description: string, source: string, images: ContentImage[] = []): Promise<ArticleContent | null> {
   try {
     logger.info(`📄 抓取文章内容: ${title.substring(0, 50)}...`)
     
@@ -27,7 +38,7 @@ export async function fetchArticleContent(url: string, title: string, descriptio
     const $ = cheerio.load(html)
     
     // 移除不需要的元素
-    $('script, style, nav, header, footer, .advertisement, .ads, .social-share, .comment, .sidebar, .related-article, .breadcrumb, .tags, .meta').remove()
+    $('script, style, nav, header, footer, .advertisement, .ads, .social-share, .comment, .related-article, .sidebar, .breadcrumb, .tags, .meta').remove()
     
     // 尝试多种常见的内容选择器
     const contentSelectors = [
@@ -51,7 +62,10 @@ export async function fetchArticleContent(url: string, title: string, descriptio
       '.detail-content',      // 详情页内容
       '.article-detail',      // 文章详情
       '.post_article',        // 另一种文章容器
-      '.post-body-content'    // 另一种内容容器
+      '.post-body-content',   // 另一种内容容器
+      '.markdown-body',       // GitHub风格的Markdown内容
+      '.article-content.markdown-body', // 掘金文章内容选择器
+      'article .markdown-body' // 掘金文章内容选择器
     ]
     
     let contentElement = null
@@ -67,6 +81,17 @@ export async function fetchArticleContent(url: string, title: string, descriptio
           foundSelector = selector
           break
         }
+      }
+    }
+    
+    // 针对掘金网站的特殊处理
+    if (!contentElement && url.includes('juejin.cn')) {
+      logger.info('🔍 针对掘金网站进行特殊处理')
+      // 掘金文章内容通常在.markdown-body类中
+      const juejinContent = $('.markdown-body').first()
+      if (juejinContent.length > 0 && juejinContent.text().trim().length > 100) {
+        contentElement = juejinContent
+        foundSelector = '.markdown-body (掘金特殊处理)'
       }
     }
     
@@ -88,7 +113,7 @@ export async function fetchArticleContent(url: string, title: string, descriptio
       }
     }
     
-    // 提取正文中的图片信息并插入占位符
+    // 提取正文中的图片信息并插入带ID的占位符
     contentElement.find('img').each((index, img) => {
       const $img = $(img)
       let src = $img.attr('src') || $img.attr('data-src') || $img.attr('data-original')
@@ -110,8 +135,15 @@ export async function fetchArticleContent(url: string, title: string, descriptio
             !src.includes('/t.png') && // IT之家的追踪像素
             !alt.includes('广告') && !alt.includes('ad') &&
             !src.includes('pixel') && !src.includes('blank')) {
-          // 在图片位置插入占位符
-          $img.replaceWith(`<<<image>>>`)
+          // 查找匹配的图片ID
+          const matchedImage = images.find(img => img.originalUrl === src || img.originalUrl.split('?')[0] === src.split('?')[0])
+          if (matchedImage) {
+            // 在图片位置插入带ID的占位符
+            $img.replaceWith(`<<<${matchedImage.id}>>>`)
+          } else {
+            // 如果没有匹配的图片，使用通用占位符
+            $img.replaceWith(`<<<image>>>`)
+          }
         } else {
           // 移除非内容图片
           $img.remove()

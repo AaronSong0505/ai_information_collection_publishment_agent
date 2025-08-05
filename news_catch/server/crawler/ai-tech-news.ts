@@ -20,35 +20,35 @@ export class AITechNewsCrawler {
   private shouldStop = false
   private onComplete?: () => void
   private imageHandler = new ImageHandler('./data/images')
+  private isRunning = false
 
   async startCrawling(): Promise<void> {
     logger.info('🤖 启动 AI 技术新闻爬虫...')
     logger.info(`📊 限制: 最多抓取 ${MAX_ARTICLES} 篇完整文章`)
     logger.info('🎯 专注: AI 技术、科技新闻、创业资讯')
     logger.info(`📊 当前已有 ${this.articleCount} 篇文章，还可抓取 ${MAX_ARTICLES - this.articleCount} 篇`)
+    this.isRunning = true
     
     try {
       // 国内主要AI新闻源
       await this.crawl36Kr()           // 36氪 - 创业和科技资讯
-      await sleep(2000) // 延迟2秒避免请求过于频繁
+      await this.sleep(2000) // 延迟2秒避免请求过于频繁
       await this.crawlITHome()         // IT之家 - 科技新闻
-      await sleep(2000)
+      await this.sleep(2000)
       await this.crawlJuejin()         // 掘金 - 技术文章
-      await sleep(2000)
-      await this.crawlSolidot()        // Solidot - 开源技术新闻
-      await sleep(2000)
+      await this.sleep(2000)
       await this.crawlSSPai()          // 少数派 - 科技生活资讯
-      await sleep(2000)
+      await this.sleep(2000)
       
       // 国内专业AI媒体
       await this.crawlJiqizhixin()     // 机器之心 - AI技术和产业媒体
-      await sleep(2000)
+      await this.sleep(2000)
       await this.crawlLeiphone()       // 雷锋网 - AI科技媒体
-      await sleep(2000)
+      await this.sleep(2000)
       
       // 国际AI新闻源
       await this.crawlTechCrunchAI()   // TechCrunch AI - 国际科技媒体AI频道
-      await sleep(2000)
+      await this.sleep(2000)
       await this.crawlMITTechReview()  // MIT Technology Review - 顶级科技评论媒体
       
       logger.info(`🎉 爬虫完成，总共抓取 ${this.articleCount} 篇文章`)
@@ -184,43 +184,6 @@ export class AITechNewsCrawler {
     }
   }
 
-  // Solidot - 开源技术新闻
-  private async crawlSolidot(): Promise<void> {
-    if (this.articleCount >= MAX_ARTICLES) return
-    
-    logger.info('📡 抓取 Solidot 开源技术新闻...')
-    
-    try {
-      const baseURL = "https://www.solidot.org"
-      const html = await myFetch(baseURL, { timeout: 15000 })
-      const $ = cheerio.load(html)
-      const items: any[] = []
-      
-      const $main = $(".block_m")
-      $main.each((_, el) => {
-        const a = $(el).find(".bg_htit a").last()
-        const url = a.attr("href")
-        const title = a.text().trim()
-        const dateRaw = $(el).find(".talk_time").text().match(/发表于(.*?分)/)?.[1]
-        
-        if (url && title && this.isAIRelated(title)) {
-          items.push({
-            url: baseURL + url,
-            title,
-            id: url,
-            source: 'solidot',
-            pubDate: new Date().toISOString(),
-            content: `${title} - Solidot 开源技术新闻报道，关注最新的技术发展动态。`
-          })
-        }
-      })
-      
-      await this.processItems(items.slice(0, 2), 'solidot')
-      
-    } catch (error) {
-      logger.error('❌ Solidot抓取失败:', error.message)
-    }
-  }
 
   // 少数派 - 科技生活
   private async crawlSSPai(): Promise<void> {
@@ -584,21 +547,22 @@ export class AITechNewsCrawler {
     try {
       logger.info(`🔍 抓取完整内容: ${item.title.substring(0, 50)}...`)
       
+      // 先提取页面中的图片并下载，获取真实的图片ID
+      const images = await this.extractImages(item.url, item.title)
+      
       // 抓取完整文章内容（包括图像占位符）
       const fullContent = await fetchArticleContent(
         item.url, 
         item.title, 
         item.content || '', 
-        sourceName
+        sourceName,
+        images  // 传递图片信息，以便在内容中插入正确的图片ID
       )
       
       if (!fullContent) {
         logger.warn(`⚠️ 无法获取完整内容，使用基本信息: ${item.title}`)
         return this.convertItem(item, sourceName)
       }
-      
-      // 抓取页面中的图片
-      const images = await this.extractImages(item.url, fullContent.title)
       
       // 转换为最终格式
       const article = {
@@ -624,7 +588,7 @@ export class AITechNewsCrawler {
   // 从页面中提取图片
   private async extractImages(url: string, title: string): Promise<ImageInfo[]> {
     try {
-      logger.info(`🖼️ 提取图片: ${title.substring(0, 30)}...`)
+      logger.info(`🖼️ 提取图片: ${title.substring(0, 50)}...`)
       
       const html = await myFetch(url, { timeout: 15000 })
       const $ = cheerio.load(html)
@@ -866,9 +830,4 @@ export function getAITechNewsCrawler(): AITechNewsCrawler {
     crawlerInstance = new AITechNewsCrawler()
   }
   return crawlerInstance
-}
-
-// 添加sleep函数定义
-function sleep(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }

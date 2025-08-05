@@ -1,0 +1,58 @@
+[
+  {
+    "name": "36氪",
+    "url": "https://www.36kr.com",
+    "type": "国内科技媒体",
+    "language": "zh-CN",
+    "description": "关注创业、科技和互联网的科技博客"
+  },
+  {
+    "name": "IT之家",
+    "url": "https://www.ithome.com",
+    "type": "国内科技媒体",
+    "language": "zh-CN",
+    "description": "提供科技新闻、评测和深度分析"
+  },
+  {
+    "name": "掘金",
+    "url": "https://juejin.cn",
+    "type": "技术社区",
+    "language": "zh-CN",
+    "description": "开发者技术分享社区，包含AI技术文章"
+  },
+  {
+    "name": "少数派",
+    "url": "https://sspai.com",
+    "type": "科技生活方式媒体",
+    "language": "zh-CN",
+    "description": "关注数字生活方式，包括AI应用相关内容"
+  },
+  {
+    "name": "机器之心",
+    "url": "https://www.jiqizhixin.com",
+    "type": "专业AI媒体",
+    "language": "zh-CN",
+    "description": "专注人工智能领域的专业媒体"
+  },
+  {
+    "name": "雷锋网",
+    "url": "https://www.leiphone.com",
+    "type": "AI科技媒体",
+    "language": "zh-CN",
+    "description": "专注AI、智能硬件和未来科技的媒体"
+  },
+  {
+    "name": "TechCrunch",
+    "url": "https://techcrunch.com",
+    "type": "国际科技媒体",
+    "language": "en",
+    "description": "国际知名科技媒体，包含AI相关新闻"
+  },
+  {
+    "name": "MIT Technology Review",
+    "url": "https://www.technologyreview.com",
+    "type": "科技评论媒体",
+    "language": "en",
+    "description": "麻省理工学院出版的科技评论杂志"
+  }
+]

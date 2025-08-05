@@ -1,0 +1,1 @@
+今后用于被ai information extraction总结后新闻的信息发布，可能是到微信公众号。

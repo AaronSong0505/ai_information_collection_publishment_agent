@@ -3,7 +3,7 @@ import { getAITechNewsCrawler } from './server/crawler/ai-tech-news.ts'
 
 console.log('🤖 开始测试 AI 技术新闻爬虫...')
 console.log('📊 目标: 抓取最新的 AI 技术相关新闻')
-console.log('🎯 新闻源: 36氪、IT之家、掘金、Solidot、少数派、机器之心、雷锋网、TechCrunch、MIT Technology Review')
+console.log('🎯 新闻源: 36氪、IT之家、掘金、少数派、机器之心、雷锋网、TechCrunch、MIT Technology Review')
 
 async function testAICrawler() {
   try {
