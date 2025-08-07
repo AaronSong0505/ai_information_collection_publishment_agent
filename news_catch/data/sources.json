@@ -1,58 +1,82 @@
 [
   {
+    "id": "36kr",
     "name": "36氪",
-    "url": "https://www.36kr.com",
-    "type": "国内科技媒体",
-    "language": "zh-CN",
-    "description": "关注创业、科技和互联网的科技博客"
+    "enabled": false,
+    "url": "https://www.36kr.com/newsflashes",
+    "description": "创业和科技资讯",
+    "errorCount": 0
   },
   {
+    "id": "ithome",
     "name": "IT之家",
-    "url": "https://www.ithome.com",
-    "type": "国内科技媒体",
-    "language": "zh-CN",
-    "description": "提供科技新闻、评测和深度分析"
+    "enabled": true,
+    "url": "https://www.ithome.com/list/",
+    "description": "科技新闻",
+    "errorCount": 0
   },
   {
+    "id": "juejin",
     "name": "掘金",
-    "url": "https://juejin.cn",
-    "type": "技术社区",
-    "language": "zh-CN",
-    "description": "开发者技术分享社区，包含AI技术文章"
+    "enabled": true,
+    "url": "https://api.juejin.cn/content_api/v1/content/article_rank?category_id=1&type=hot&spider=0",
+    "description": "技术文章",
+    "errorCount": 0
   },
   {
+    "id": "solidot",
+    "name": "Solidot",
+    "enabled": false,
+    "url": "https://www.solidot.org",
+    "description": "开源技术新闻",
+    "errorCount": 0
+  },
+  {
+    "id": "sspai",
     "name": "少数派",
-    "url": "https://sspai.com",
-    "type": "科技生活方式媒体",
-    "language": "zh-CN",
-    "description": "关注数字生活方式，包括AI应用相关内容"
+    "enabled": true,
+    "url": "https://sspai.com/api/v1/article/tag/page/get?limit=30&offset=0&tag=%E7%83%AD%E9%97%A8%E6%96%87%E7%AB%A0&released=false",
+    "description": "科技生活文章",
+    "errorCount": 0
   },
   {
-    "name": "机器之心",
-    "url": "https://www.jiqizhixin.com",
-    "type": "专业AI媒体",
-    "language": "zh-CN",
-    "description": "专注人工智能领域的专业媒体"
-  },
-  {
-    "name": "雷锋网",
-    "url": "https://www.leiphone.com",
-    "type": "AI科技媒体",
-    "language": "zh-CN",
-    "description": "专注AI、智能硬件和未来科技的媒体"
-  },
-  {
+    "id": "techcrunch",
     "name": "TechCrunch",
-    "url": "https://techcrunch.com",
-    "type": "国际科技媒体",
-    "language": "en",
-    "description": "国际知名科技媒体，包含AI相关新闻"
+    "enabled": true,
+    "url": "https://techcrunch.com/category/artificial-intelligence/",
+    "description": "国外科技创业媒体，专注AI和科技创业新闻",
+    "errorCount": 0
   },
   {
+    "id": "arstechnica",
+    "name": "Ars Technica",
+    "enabled": true,
+    "url": "https://arstechnica.com/information-technology/",
+    "description": "高质量科技新闻和深度分析",
+    "errorCount": 0
+  },
+  {
+    "id": "hackernews",
+    "name": "Hacker News",
+    "enabled": true,
+    "url": "https://hnrss.org/newest?q=ai",
+    "description": "创业和计算机科学相关新闻",
+    "errorCount": 0
+  },
+  {
+    "id": "wired",
+    "name": "Wired",
+    "enabled": true,
+    "url": "https://www.wired.com/category/artificial-intelligence/",
+    "description": "科技、文化、商业和政治的交叉点",
+    "errorCount": 0
+  },
+  {
+    "id": "mittech",
     "name": "MIT Technology Review",
-    "url": "https://www.technologyreview.com",
-    "type": "科技评论媒体",
-    "language": "en",
-    "description": "麻省理工学院出版的科技评论杂志"
+    "enabled": true,
+    "url": "https://www.technologyreview.com/topic/artificial-intelligence/",
+    "description": "麻省理工科技评论，关注新兴技术",
+    "errorCount": 0
   }
 ]

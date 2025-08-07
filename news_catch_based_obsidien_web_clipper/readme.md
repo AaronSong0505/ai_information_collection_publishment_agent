@@ -1,0 +1,1 @@
+现在我们已经完成了一个简单的爬虫。但是我发现我平常使用的obsidian插件web clipper可以准确的把我当前网页中的内容和文本完美的复制下来添加到我本地的obsidian软件中。因此我突发奇想，这个web clipper是否可以帮助我完成我对于新闻爬虫的功能。这好像是web clipper的项目链接：”https://github.com/obsidianmd/obsidian-clipper.git“。现在请你先认证看下这个项目链接，且思考下我的需求。看看是否能在这个文件夹中构建我的项目#news_catch_based_obsidien_web_clipper

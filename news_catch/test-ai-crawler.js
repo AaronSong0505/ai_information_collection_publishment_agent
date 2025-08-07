@@ -1,9 +1,9 @@
 // 直接测试 AI 技术新闻爬虫
-import { getAITechNewsCrawler } from './server/crawler/ai-tech-news.ts'
+import { getAITechNewsCrawler } from './server/crawler/ai-tech-news.js'
 
 console.log('🤖 开始测试 AI 技术新闻爬虫...')
 console.log('📊 目标: 抓取最新的 AI 技术相关新闻')
-console.log('🎯 新闻源: 36氪、IT之家、掘金、少数派、机器之心、雷锋网、TechCrunch、MIT Technology Review')
+console.log('🎯 新闻源: 36氪、IT之家、掘金、Solidot、少数派')
 
 async function testAICrawler() {
   try {
@@ -29,58 +29,36 @@ async function testAICrawler() {
     setTimeout(showResults, 2000)
     
   } catch (error) {
-    console.error('❌ 测试失败:', error)
+    console.error('❌ AI 爬虫测试失败:', error)
   }
 }
 
 async function showResults() {
   try {
-    const fs = await import('fs')
-    const articlesFile = './data/articles.json'
+    const { getSimpleDatabase } = await import('./server/database/simple.js')
+    const db = getSimpleDatabase()
     
-    if (fs.existsSync(articlesFile)) {
-      const articlesData = fs.readFileSync(articlesFile, 'utf-8')
-      const articles = JSON.parse(articlesData)
-      
-      console.log(`\n📚 总共抓取: ${articles.length} 篇 AI 技术新闻`)
-      
-      if (articles.length > 0) {
-        console.log('\n📊 新闻来源统计:')
-        const sources = {}
-        articles.forEach(article => {
-          sources[article.source] = (sources[article.source] || 0) + 1
-        })
-        
-        Object.entries(sources).forEach(([source, count]) => {
-          console.log(`   - ${source}: ${count} 篇`)
-        })
-        
-        console.log('\n📄 AI 新闻列表:')
-        articles.forEach((article, index) => {
-          console.log(`   ${index + 1}. [${article.source}] ${article.title}`)
-          if (article.tags && article.tags.length > 0) {
-            console.log(`      🏷️ 标签: ${article.tags.join(', ')}`)
-          }
-        })
-        
-        console.log('\n🔗 新闻链接 (前5个):')
-        articles.slice(0, 5).forEach((article, index) => {
-          console.log(`   ${index + 1}. ${article.url}`)
-        })
-      } else {
-        console.log('⚠️ 没有抓取到任何文章')
-      }
-      
+    console.log('\n📋 抓取结果:')
+    const result = await db.searchArticles({ limit: 10, offset: 0 })
+    if (result.items && result.items.length === 0) {
+      console.log('   暂无文章')
+    } else if (result.items) {
+      result.items.forEach((article, index) => {
+        console.log(`   ${index + 1}. ${article.title}`)
+        console.log(`      来源: ${article.source}`)
+        console.log(`      时间: ${new Date(article.publishTime).toLocaleString()}`)
+        console.log('')
+      })
     } else {
-      console.log('⚠️ 未找到文章数据文件')
+      console.log('   无法获取文章列表')
     }
     
+    console.log('✅ 测试完成')
+    process.exit(0)
   } catch (error) {
-    console.error('❌ 显示结果时出错:', error.message)
+    console.error('❌ 显示结果时出错:', error)
+    process.exit(1)
   }
-  
-  console.log('\n🎊 AI 技术新闻爬虫测试完成！')
-  console.log('💡 这些都是最新的 AI 技术相关新闻，可以直接访问查看详细内容。')
 }
 
 // 启动测试

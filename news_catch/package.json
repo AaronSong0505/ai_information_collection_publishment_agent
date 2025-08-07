@@ -16,6 +16,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:image-tags": "tsx test-image-tags.js",
+    "example:image-usage": "tsx example-image-usage.js",
     "docker:build": "docker build -t news-catch .",
     "docker:run": "docker-compose up -d",
     "docker:stop": "docker-compose down"

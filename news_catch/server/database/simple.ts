@@ -15,6 +15,40 @@ const DATA_DIR = './data'
 const ARTICLES_FILE = join(DATA_DIR, 'articles.json')
 const SOURCES_FILE = join(DATA_DIR, 'sources.json')
 
+// 默认新闻源配置
+const DEFAULT_SOURCES: Omit<NewsSource, 'id' | 'errorCount'>[] = [
+  {
+    name: "36氪",
+    enabled: true,
+    url: "https://www.36kr.com/newsflashes",
+    description: "创业和科技资讯"
+  },
+  {
+    name: "IT之家",
+    enabled: true,
+    url: "https://www.ithome.com/list/",
+    description: "科技新闻"
+  },
+  {
+    name: "掘金",
+    enabled: true,
+    url: "https://api.juejin.cn/content_api/v1/content/article_rank?category_id=1&type=hot&spider=0",
+    description: "技术文章"
+  },
+  {
+    name: "Solidot",
+    enabled: true,
+    url: "https://www.solidot.org",
+    description: "开源技术新闻"
+  },
+  {
+    name: "少数派",
+    enabled: true,
+    url: "https://sspai.com/api/v1/article/tag/page/get?limit=30&offset=0&tag=%E7%83%AD%E9%97%A8%E6%96%87%E7%AB%A0&released=false",
+    description: "科技生活文章"
+  }
+]
+
 export class SimpleDatabase {
   async init() {
     try {
@@ -39,6 +73,10 @@ export class SimpleDatabase {
         const articlesData = await fs.readFile(ARTICLES_FILE, 'utf-8')
         const articlesArray = JSON.parse(articlesData)
         articlesArray.forEach((article: ParsedArticle & { id: string }) => {
+          // 确保publishTime是Date对象
+          if (typeof article.publishTime === 'string') {
+            article.publishTime = new Date(article.publishTime)
+          }
           articles.set(article.id, article)
         })
         logger.info(`Loaded ${articles.size} articles`)
@@ -50,15 +88,43 @@ export class SimpleDatabase {
       try {
         const sourcesData = await fs.readFile(SOURCES_FILE, 'utf-8')
         const sourcesArray = JSON.parse(sourcesData)
-        sourcesArray.forEach((source: NewsSource) => {
-          sources.set(source.id, source)
-        })
-        logger.info(`Loaded ${sources.size} sources`)
+        if (sourcesArray.length > 0) {
+          sourcesArray.forEach((source: NewsSource) => {
+            sources.set(source.id, source)
+          })
+          logger.info(`Loaded ${sources.size} sources`)
+        } else {
+          logger.info('Sources file is empty, creating default sources')
+          // 如果sources.json文件存在但为空数组，则创建默认配置
+          await this.createDefaultSources()
+        }
       } catch (error) {
-        logger.info('No existing sources file found')
+        logger.info('No existing sources file found, creating default sources')
+        // 如果没有找到sources.json文件，则创建默认配置
+        await this.createDefaultSources()
       }
     } catch (error) {
       logger.warn('Error loading data:', error)
+    }
+  }
+
+  private async createDefaultSources() {
+    // 只有在没有新闻源时才创建默认新闻源
+    if (sources.size === 0) {
+      // 创建默认新闻源
+      for (const source of DEFAULT_SOURCES) {
+        const id = generateId();
+        const newSource: NewsSource = {
+          ...source,
+          id,
+          errorCount: 0
+        }
+        sources.set(id, newSource)
+      }
+      
+      // 保存默认新闻源到文件
+      await this.saveData()
+      logger.info(`Created ${sources.size} default sources`)
     }
   }
 
@@ -67,7 +133,7 @@ export class SimpleDatabase {
       // 保存文章数据
       const articlesArray = Array.from(articles.values()).map(article => ({
         ...article,
-        publishTime: article.publishTime.toISOString()
+        publishTime: article.publishTime instanceof Date ? article.publishTime.toISOString() : article.publishTime
       }))
       await fs.writeFile(ARTICLES_FILE, JSON.stringify(articlesArray, null, 2), 'utf-8')
 
@@ -76,6 +142,25 @@ export class SimpleDatabase {
       await fs.writeFile(SOURCES_FILE, JSON.stringify(sourcesArray, null, 2), 'utf-8')
     } catch (error) {
       logger.error('Error saving data:', error)
+    }
+  }
+
+  // 确保sources.json文件初始化
+  async ensureSourcesFile(): Promise<void> {
+    try {
+      // 检查文件是否存在
+      await fs.access(SOURCES_FILE)
+      
+      // 检查文件内容
+      const content = await fs.readFile(SOURCES_FILE, 'utf-8')
+      const sourcesArray = JSON.parse(content)
+      if (!Array.isArray(sourcesArray) || sourcesArray.length === 0) {
+        // 文件为空或内容为空数组，写入默认配置
+        await this.createDefaultSources()
+      }
+    } catch (error) {
+      // 文件不存在，创建默认配置
+      await this.createDefaultSources()
     }
   }
 
@@ -118,7 +203,11 @@ export class SimpleDatabase {
     }
 
     // 排序
-    filteredArticles.sort((a, b) => b.publishTime.getTime() - a.publishTime.getTime())
+    filteredArticles.sort((a, b) => {
+      const timeA = a.publishTime instanceof Date ? a.publishTime.getTime() : new Date(a.publishTime).getTime()
+      const timeB = b.publishTime instanceof Date ? b.publishTime.getTime() : new Date(b.publishTime).getTime()
+      return timeB - timeA
+    })
 
     const total = filteredArticles.length
     const items = filteredArticles.slice(offset, offset + limit)
@@ -127,47 +216,18 @@ export class SimpleDatabase {
     return { items, total, hasMore }
   }
 
-  async deleteArticle(id: string): Promise<void> {
-    articles.delete(id)
-    await this.saveData()
-  }
-
   // 新闻源操作
-  async addSource(source: Omit<NewsSource, 'id' | 'errorCount'>): Promise<string> {
-    const id = generateId()
-    const newSource: NewsSource = {
-      ...source,
-      id,
-      errorCount: 0
-    }
-    sources.set(id, newSource)
-    await this.saveData()
-    return id
-  }
-
-  async getSource(id: string): Promise<NewsSource | null> {
-    return sources.get(id) || null
-  }
-
-  async getAllSources(): Promise<NewsSource[]> {
+  getAllSources(): NewsSource[] {
     return Array.from(sources.values())
   }
 
-  async getEnabledSources(): Promise<NewsSource[]> {
-    return Array.from(sources.values()).filter(source => source.enabled)
-  }
-
-  async updateSource(id: string, updates: Partial<NewsSource>): Promise<void> {
-    const source = sources.get(id)
-    if (source) {
-      sources.set(id, { ...source, ...updates })
-      await this.saveData()
-    }
-  }
-
-  async deleteSource(id: string): Promise<void> {
-    sources.delete(id)
+  async updateSource(sourceId: string, updates: Partial<NewsSource>): Promise<boolean> {
+    const source = sources.get(sourceId)
+    if (!source) return false
+    
+    Object.assign(source, updates)
     await this.saveData()
+    return true
   }
 
   // 缓存操作

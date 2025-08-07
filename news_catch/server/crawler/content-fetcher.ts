@@ -2,7 +2,7 @@ import * as cheerio from 'cheerio'
 import myFetch from '../utils/fetch.js'
 import logger from '../utils/logger.js'
 import { generateContentHash } from '../utils/hash.js'
-import type { ImageInfo } from '../../shared/types.js'
+import type { ImageInfo } from "@shared/types"
 
 export interface ArticleContent {
   title: string
@@ -12,21 +12,26 @@ export interface ArticleContent {
   publishTime: Date
   source: string
   hash: string
+  imageMap?: Map<string, string> // 图片URL到ID的映射
 }
 
-export interface ContentImage {
-  id: string
-  originalUrl: string
-  localPath: string
-  format: string
-  size: number
-  width?: number
-  height?: number
-}
-
-export async function fetchArticleContent(url: string, title: string, description: string, source: string, images: ContentImage[] = []): Promise<ArticleContent | null> {
+/**
+ * 抓取文章内容并处理图片标签
+ * @param url 文章URL
+ * @param title 文章标题
+ * @param description 文章描述
+ * @param source 来源
+ * @param imageMap 图片URL到ID的映射（可选）
+ */
+export async function fetchArticleContentWithImages(
+  url: string, 
+  title: string, 
+  description: string, 
+  source: string,
+  imageMap?: Map<string, string>
+): Promise<ArticleContent | null> {
   try {
-    logger.info(`📄 抓取文章内容: ${title.substring(0, 50)}...`)
+    logger.info(`📄 抓取文章内容（含图片处理）: ${title.substring(0, 50)}...`)
     
     const html = await myFetch(url, {
       headers: {
@@ -38,7 +43,7 @@ export async function fetchArticleContent(url: string, title: string, descriptio
     const $ = cheerio.load(html)
     
     // 移除不需要的元素
-    $('script, style, nav, header, footer, .advertisement, .ads, .social-share, .comment, .related-article, .sidebar, .breadcrumb, .tags, .meta').remove()
+    $('script, style, nav, header, footer, .advertisement, .ads, .social-share, .comment').remove()
     
     // 尝试多种常见的内容选择器
     const contentSelectors = [
@@ -53,28 +58,16 @@ export async function fetchArticleContent(url: string, title: string, descriptio
       '.article-body',
       '.post-body',
       '.rich_media_content',  // 微信公众号
-      '#article-content',     // 通用ID选择器
-      '.post-content .text',  // 一些博客平台
-      '.article-main',        // 一些新闻网站
-      '.news-content',        // 新闻内容类
-      '.content-main',        // 主内容区域
-      '.g-content',           // 一些网站的内容类
-      '.detail-content',      // 详情页内容
-      '.article-detail',      // 文章详情
-      '.post_article',        // 另一种文章容器
-      '.post-body-content',   // 另一种内容容器
-      '.markdown-body',       // GitHub风格的Markdown内容
-      '.article-content.markdown-body', // 掘金文章内容选择器
-      'article .markdown-body' // 掘金文章内容选择器
+      '#article-content'      // 通用ID选择器
     ]
     
-    let contentElement = null
+    let contentElement: cheerio.Cheerio<cheerio.Element> | null = null
     let foundSelector = ''
     
+    // 找到最合适的内容容器
     for (const selector of contentSelectors) {
       const element = $(selector).first()
       if (element.length > 0) {
-        // 检查元素是否包含足够的文本内容
         const textContent = element.text().trim()
         if (textContent.length > 100) {
           contentElement = element
@@ -84,104 +77,26 @@ export async function fetchArticleContent(url: string, title: string, descriptio
       }
     }
     
-    // 针对掘金网站的特殊处理
-    if (!contentElement && url.includes('juejin.cn')) {
-      logger.info('🔍 针对掘金网站进行特殊处理')
-      // 掘金文章内容通常在.markdown-body类中
-      const juejinContent = $('.markdown-body').first()
-      if (juejinContent.length > 0 && juejinContent.text().trim().length > 100) {
-        contentElement = juejinContent
-        foundSelector = '.markdown-body (掘金特殊处理)'
-      }
+    let content = ''
+    
+    if (contentElement && contentElement.length > 0) {
+      // 处理内容并替换图片
+      content = processContentWithImages(contentElement, imageMap)
+    } else {
+      // 如果没找到内容容器，尝试提取所有段落和图片
+      content = processAllContentWithImages($, imageMap)
     }
     
-    if (!contentElement) {
-      logger.warn(`⚠️ 未找到合适的内容选择器，使用描述作为后备: ${title}`)
-      // 如果没找到内容，使用描述作为后备
-      const content = description || title
-      const summary = content.length > 300 ? content.substring(0, 300) + '...' : content
-      const hash = generateContentHash(title, content, url)
-      
-      return {
-        title: title.trim(),
-        content,
-        summary,
-        url,
-        publishTime: new Date(),
-        source,
-        hash
-      }
+    // 如果还是没有找到合适的内容，使用描述作为后备
+    if (!content || content.length < 50) {
+      content = description || title
     }
     
-    // 提取正文中的图片信息并插入带ID的占位符
-    contentElement.find('img').each((index, img) => {
-      const $img = $(img)
-      let src = $img.attr('src') || $img.attr('data-src') || $img.attr('data-original')
-      const alt = $img.attr('alt') || ''
-      
-      if (src) {
-        // 处理相对路径
-        if (src.startsWith('//')) {
-          src = 'https:' + src
-        } else if (src.startsWith('/')) {
-          const baseUrl = new URL(url)
-          src = baseUrl.origin + src
-        } else if (!src.startsWith('http')) {
-          src = new URL(src, url).href
-        }
-        
-        // 过滤掉明显不是内容图片的图片
-        if (!src.includes('ad') && !src.includes('banner') && !src.includes('tracking') && 
-            !src.includes('/t.png') && // IT之家的追踪像素
-            !alt.includes('广告') && !alt.includes('ad') &&
-            !src.includes('pixel') && !src.includes('blank')) {
-          // 查找匹配的图片ID
-          const matchedImage = images.find(img => img.originalUrl === src || img.originalUrl.split('?')[0] === src.split('?')[0])
-          if (matchedImage) {
-            // 在图片位置插入带ID的占位符
-            $img.replaceWith(`<<<${matchedImage.id}>>>`)
-          } else {
-            // 如果没有匹配的图片，使用通用占位符
-            $img.replaceWith(`<<<image>>>`)
-          }
-        } else {
-          // 移除非内容图片
-          $img.remove()
-        }
-      }
-    })
-    
-    // 获取处理后的内容，保留HTML结构以获取更好的文本格式
-    let content = contentElement.text().trim()
-    
-    // 清理内容，移除多余的空白字符和特殊符号
+    // 清理内容
     content = content.replace(/\s+/g, ' ').trim()
     
-    // 如果内容太短，尝试获取所有段落
-    if (content.length < 200) {
-      const paragraphs = $('p').map((i, el) => $(el).text().trim()).get()
-      const combinedContent = paragraphs.filter(p => p.length > 20).join('\n\n')
-      
-      if (combinedContent.length > content.length) {
-        content = combinedContent.replace(/\s+/g, ' ').trim()
-      }
-    }
-    
-    // 如果仍然内容太短，尝试获取所有文本内容
-    if (content.length < 100) {
-      // 获取所有文本内容，但排除明显的无关内容
-      const allTextElements = contentElement.find('*').not('script, style, nav, header, footer, .advertisement, .ads, .social-share, .comment, .sidebar, .related-article, .breadcrumb, .tags, .meta');
-      const allText = allTextElements.map((i, el) => $(el).text().trim()).get()
-        .filter(text => text.length > 20)
-        .join('\n\n');
-      
-      if (allText.length > content.length) {
-        content = allText.replace(/\s+/g, ' ').trim();
-      }
-    }
-    
-    // 生成摘要（前300个字符）
-    const summary = content.length > 300 ? content.substring(0, 300) + '...' : content
+    // 生成摘要（前300个字符，但要避免截断图片标签）
+    const summary = generateSummaryWithImageTags(content, 300)
     
     // 生成内容哈希用于去重
     const hash = generateContentHash(title, content, url)
@@ -193,28 +108,149 @@ export async function fetchArticleContent(url: string, title: string, descriptio
       url,
       publishTime: new Date(),
       source,
-      hash
+      hash,
+      imageMap
     }
     
-    logger.success(`✅ 内容抓取成功: ${title.substring(0, 30)}... (${content.length} 字符) 使用选择器: ${foundSelector}`)
+    const imageCount = imageMap ? imageMap.size : 0
+    logger.success(`✅ 内容抓取成功: ${title.substring(0, 30)}... (${content.length} 字符, ${imageCount} 张图片) 使用选择器: ${foundSelector || '段落组合'}`)
     return article
     
   } catch (error) {
-    logger.warn(`⚠️ 内容抓取失败: ${title}`, error.message)
+    logger.warn(`⚠️ 内容抓取失败: ${title}`, (error as Error).message)
     
     // 如果抓取失败，返回基本信息
-    const content = description || title
-    const summary = content.length > 300 ? content.substring(0, 300) + '...' : content
-    const hash = generateContentHash(title, content, url)
-    
+    const fallbackContent = description && description.length > 50 ? description : (title + ' - 来自' + source + '的完整文章内容。')
     return {
       title: title.trim(),
-      content,
-      summary,
+      content: fallbackContent,
+      summary: fallbackContent.length > 300 ? fallbackContent.substring(0, 300) + '...' : fallbackContent,
       url,
       publishTime: new Date(),
       source,
-      hash
+      hash: generateContentHash(title, fallbackContent, url),
+      imageMap
     }
   }
+}
+
+/**
+ * 处理内容元素中的文本和图片
+ */
+function processContentWithImages(
+  contentElement: cheerio.Cheerio<cheerio.Element>, 
+  imageMap?: Map<string, string>
+): string {
+  if (!contentElement || contentElement.length === 0) {
+    return ''
+  }
+  
+  // 创建一个新的cheerio实例来处理HTML
+  const html = contentElement.html() || ''
+  const $ = cheerio.load(html)
+  
+  // 处理所有图片，替换为标签
+  $('img').each((index, element) => {
+    const $img = $(element)
+    const imgSrc = $img.attr('data-src') || $img.attr('data-original') || $img.attr('src')
+    
+    if (imgSrc && imageMap) {
+      const imageId = getImageIdFromUrl(imgSrc, imageMap)
+      if (imageId) {
+        // 用图片标签替换img元素
+        $img.replaceWith(`<|${imageId}|>`)
+      }
+    }
+  })
+  
+  // 获取处理后的文本内容
+  const textContent = $.text().trim()
+  
+  return textContent.replace(/\s+/g, ' ').trim()
+}
+
+/**
+ * 处理整个页面的内容和图片（当找不到特定内容容器时）
+ */
+function processAllContentWithImages($: cheerio.CheerioAPI, imageMap?: Map<string, string>): string {
+  // 先处理所有图片，替换为标签
+  $('img').each((index, element) => {
+    const $img = $(element)
+    const imgSrc = $img.attr('data-src') || $img.attr('data-original') || $img.attr('src')
+    
+    if (imgSrc && imageMap) {
+      const imageId = getImageIdFromUrl(imgSrc, imageMap)
+      if (imageId) {
+        // 用图片标签替换img元素
+        $img.replaceWith(`<|${imageId}|>`)
+      }
+    }
+  })
+  
+  const parts: string[] = []
+  
+  // 获取所有段落（现在包含图片标签）
+  $('p').each((index, element) => {
+    const $p = $(element)
+    const text = $p.text().trim()
+    
+    if (text.length > 20) {
+      parts.push(text)
+    }
+  })
+  
+  // 如果没有段落，尝试获取body或其他容器的文本
+  if (parts.length === 0) {
+    const bodyText = $('body').text().trim() || $.text().trim()
+    if (bodyText.length > 50) {
+      parts.push(bodyText)
+    }
+  }
+  
+  return parts.join('\n\n').replace(/\s+/g, ' ').trim()
+}
+
+/**
+ * 从图片URL获取对应的图片ID
+ */
+function getImageIdFromUrl(imgSrc: string, imageMap: Map<string, string>): string | null {
+  // 处理相对路径
+  let fullUrl = imgSrc
+  if (imgSrc.startsWith('//')) {
+    fullUrl = 'https:' + imgSrc
+  }
+  
+  return imageMap.get(fullUrl) || imageMap.get(imgSrc) || null
+}
+
+/**
+ * 生成包含图片标签的摘要，避免截断图片标签
+ */
+function generateSummaryWithImageTags(content: string, maxLength: number): string {
+  if (content.length <= maxLength) {
+    return content
+  }
+  
+  // 找到最后一个完整的图片标签位置
+  let cutPosition = maxLength
+  const imageTagRegex = /<\|[^|]+\|>/g
+  let match
+  
+  while ((match = imageTagRegex.exec(content)) !== null) {
+    if (match.index < maxLength && match.index + match[0].length > maxLength) {
+      // 图片标签跨越了截断位置，调整截断位置到标签之前
+      cutPosition = match.index
+      break
+    } else if (match.index + match[0].length <= maxLength) {
+      // 图片标签完全在截断位置之前，可以包含
+      cutPosition = Math.max(cutPosition, match.index + match[0].length)
+    }
+  }
+  
+  return content.substring(0, cutPosition) + '...'
+}
+
+// 保持原有的函数作为向后兼容
+export async function fetchArticleContent(url: string, title: string, description: string, source: string): Promise<ArticleContent | null> {
+  return fetchArticleContentWithImages(url, title, description, source)
 }
