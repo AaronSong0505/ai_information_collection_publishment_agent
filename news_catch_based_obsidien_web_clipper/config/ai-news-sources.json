@@ -1,0 +1,176 @@
+{
+  "sources": [
+    {
+      "id": "36kr-ai",
+      "name": "36氪 - AI 频道",
+      "baseUrl": "https://36kr.com",
+      "searchUrls": [
+        "https://36kr.com/search/articles/人工智能",
+        "https://36kr.com/search/articles/AI",
+        "https://36kr.com/search/articles/机器学习",
+        "https://36kr.com/search/articles/大模型"
+      ],
+      "enabled": false,
+      "tags": ["AI", "创业", "科技"],
+      "selectors": {
+        "articleLinks": ".article-item-title a, .kr-flow-article-title a",
+        "title": "h1, .article-title",
+        "content": ".article-content, .kr-rich-text-container",
+        "publishTime": ".time, .article-info-time"
+      },
+      "keywords": ["人工智能", "AI", "机器学习", "深度学习", "大模型", "ChatGPT", "GPT", "神经网络"],
+      "interval": 30
+    },
+    {
+      "id": "ithome-ai",
+      "name": "IT之家 - AI 新闻",
+      "baseUrl": "https://www.ithome.com",
+      "searchUrls": [
+        "https://www.ithome.com/tag/人工智能",
+        "https://www.ithome.com/tag/AI",
+        "https://www.ithome.com/tag/机器学习",
+        "https://www.ithome.com/search?q=ChatGPT"
+      ],
+      "enabled": false,
+      "tags": ["AI", "科技", "新闻"],
+      "selectors": {
+        "articleLinks": ".lst a, .post-title a",
+        "title": "h1, .post-title",
+        "content": ".post-content, .content",
+        "publishTime": ".post-date, .time"
+      },
+      "keywords": ["人工智能", "AI", "机器学习", "深度学习", "大模型", "ChatGPT", "OpenAI", "百度", "阿里", "腾讯"],
+      "interval": 20
+    },
+    {
+      "id": "juejin-ai",
+      "name": "掘金 - AI 技术",
+      "baseUrl": "https://juejin.cn",
+      "searchUrls": [
+        "https://juejin.cn/search?query=人工智能",
+        "https://juejin.cn/search?query=AI",
+        "https://juejin.cn/search?query=机器学习",
+        "https://juejin.cn/search?query=深度学习"
+      ],
+      "enabled": true,
+      "tags": ["AI", "技术", "开发"],
+      "selectors": {
+        "articleLinks": ".title-row a, .article-title a",
+        "title": "h1, .article-title",
+        "content": ".markdown-body, .article-content",
+        "publishTime": ".meta-box .time, .publish-time"
+      },
+      "keywords": ["人工智能", "AI", "机器学习", "深度学习", "神经网络", "TensorFlow", "PyTorch", "算法"],
+      "interval": 25
+    },
+    {
+      "id": "solidot-ai",
+      "name": "Solidot - AI 科技",
+      "baseUrl": "https://www.solidot.org",
+      "searchUrls": [
+        "https://www.solidot.org/search.pl?q=人工智能",
+        "https://www.solidot.org/search.pl?q=AI",
+        "https://www.solidot.org/search.pl?q=机器学习"
+      ],
+      "enabled": false,
+      "tags": ["AI", "开源", "科技"],
+      "selectors": {
+        "articleLinks": ".story-title a, h2 a",
+        "title": "h1, .story-title",
+        "content": ".story-text, .content",
+        "publishTime": ".story-time, .time"
+      },
+      "keywords": ["人工智能", "AI", "机器学习", "开源", "算法", "神经网络"],
+      "interval": 45
+    },
+    {
+      "id": "sspai-ai",
+      "name": "少数派 - AI 效率",
+      "baseUrl": "https://sspai.com",
+      "searchUrls": [
+        "https://sspai.com/search/post/人工智能",
+        "https://sspai.com/search/post/AI",
+        "https://sspai.com/search/post/ChatGPT"
+      ],
+      "enabled": true,
+      "tags": ["AI", "效率", "工具"],
+      "selectors": {
+        "articleLinks": ".article-card-title a, .title a",
+        "title": "h1, .article-title",
+        "content": ".article-body, .content",
+        "publishTime": ".article-meta .time"
+      },
+      "keywords": ["人工智能", "AI", "ChatGPT", "效率工具", "自动化", "AI工具"],
+      "interval": 35
+    },
+    {
+      "id": "techcrunch-ai",
+      "name": "TechCrunch - AI",
+      "baseUrl": "https://techcrunch.com",
+      "searchUrls": [
+        "https://techcrunch.com/category/artificial-intelligence/",
+        "https://techcrunch.com/tag/ai/",
+        "https://techcrunch.com/tag/machine-learning/"
+      ],
+      "enabled": false,
+      "tags": ["AI", "创业", "国际"],
+      "selectors": {
+        "articleLinks": ".post-block__title__link, h2 a",
+        "title": "h1, .article-title",
+        "content": ".article-content, .entry-content",
+        "publishTime": ".river-byline__time, .time"
+      },
+      "keywords": ["artificial intelligence", "AI", "machine learning", "deep learning", "neural network"],
+      "interval": 60
+    },
+    {
+      "id": "arxiv-ai",
+      "name": "arXiv - AI 论文",
+      "baseUrl": "https://arxiv.org",
+      "searchUrls": [
+        "https://arxiv.org/list/cs.AI/recent",
+        "https://arxiv.org/list/cs.LG/recent",
+        "https://arxiv.org/list/cs.CL/recent"
+      ],
+      "enabled": false,
+      "tags": ["AI", "学术", "论文"],
+      "selectors": {
+        "articleLinks": ".list-title a",
+        "title": "h1, .title",
+        "content": ".abstract, blockquote",
+        "publishTime": ".list-dateline"
+      },
+      "keywords": ["artificial intelligence", "machine learning", "deep learning", "neural network", "NLP"],
+      "interval": 120
+    },
+    {
+      "id": "aibase-news",
+      "name": "AIBase - AI 资讯",
+      "baseUrl": "https://www.aibase.com",
+      "searchUrls": [
+        "https://www.aibase.com/news",
+        "https://www.aibase.com/zh/news"
+      ],
+      "enabled": false,
+      "tags": ["AI", "资讯", "工具"],
+      "selectors": {
+        "articleLinks": ".news-item a, .article-title a",
+        "title": "h1, .article-title",
+        "content": ".article-content, .content",
+        "publishTime": ".publish-time, .time"
+      },
+      "keywords": ["人工智能", "AI工具", "AI应用", "机器学习"],
+      "interval": 40
+    }
+  ],
+  "globalSettings": {
+    "maxArticlesPerSource": 10,
+    "contentMinLength": 100,
+    "enableKeywordFiltering": true,
+    "keywordMatchThreshold": 1,
+    "excludeKeywords": ["广告", "推广", "营销"],
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+    "requestDelay": 2000,
+    "timeout": 30000
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "scheduler": {
+    "defaultInterval": "0 */30 * * * *",
+    "maxConcurrent": 3,
+    "retryAttempts": 3,
+    "enableAutoCleanup": true,
+    "cleanupDays": 30,
+    "enableBackup": true,
+    "backupInterval": "0 0 2 * * *"
+  },
+  "processor": {
+    "maxConcurrent": 2,
+    "timeout": 30000,
+    "retryDelay": 1000,
+    "includeImages": true,
+    "preserveFormatting": true,
+    "maxImageSize": 5242880
+  },
+  "storage": {
+    "dataDir": "./data",
+    "enableJsonBackup": true,
+    "enableSQLite": true
+  },
+  "clipper": {
+    "timeout": 30000,
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+    "includeImages": true,
+    "preserveFormatting": true
+  }
+}
