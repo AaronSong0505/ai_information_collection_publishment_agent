@@ -4,6 +4,8 @@
       "id": "36kr-ai",
       "name": "36氪 - AI 频道",
       "baseUrl": "https://36kr.com",
+      "homepageUrl": "https://36kr.com",
+      "rssUrls": ["https://36kr.com/feed"],
       "searchUrls": [
         "https://36kr.com/search/articles/人工智能",
         "https://36kr.com/search/articles/AI",
@@ -25,6 +27,8 @@
       "id": "ithome-ai",
       "name": "IT之家 - AI 新闻",
       "baseUrl": "https://www.ithome.com",
+      "homepageUrl": "https://www.ithome.com",
+      "rssUrls": ["https://www.ithome.com/rss/"],
       "searchUrls": [
         "https://www.ithome.com/tag/人工智能",
         "https://www.ithome.com/tag/AI",
@@ -46,6 +50,8 @@
       "id": "juejin-ai",
       "name": "掘金 - AI 技术",
       "baseUrl": "https://juejin.cn",
+      "homepageUrl": "https://juejin.cn",
+      "rssUrls": [],
       "searchUrls": [
         "https://juejin.cn/search?query=人工智能",
         "https://juejin.cn/search?query=AI",
@@ -67,6 +73,8 @@
       "id": "solidot-ai",
       "name": "Solidot - AI 科技",
       "baseUrl": "https://www.solidot.org",
+      "homepageUrl": "https://www.solidot.org",
+      "rssUrls": ["https://www.solidot.org/index.rss"],
       "searchUrls": [
         "https://www.solidot.org/search.pl?q=人工智能",
         "https://www.solidot.org/search.pl?q=AI",
@@ -87,6 +95,8 @@
       "id": "sspai-ai",
       "name": "少数派 - AI 效率",
       "baseUrl": "https://sspai.com",
+      "homepageUrl": "https://sspai.com",
+      "rssUrls": ["https://sspai.com/feed"],
       "searchUrls": [
         "https://sspai.com/search/post/人工智能",
         "https://sspai.com/search/post/AI",
@@ -107,6 +117,8 @@
       "id": "techcrunch-ai",
       "name": "TechCrunch - AI",
       "baseUrl": "https://techcrunch.com",
+      "homepageUrl": "https://techcrunch.com",
+      "rssUrls": ["https://techcrunch.com/category/artificial-intelligence/feed/"],
       "searchUrls": [
         "https://techcrunch.com/category/artificial-intelligence/",
         "https://techcrunch.com/tag/ai/",
@@ -127,6 +139,8 @@
       "id": "arxiv-ai",
       "name": "arXiv - AI 论文",
       "baseUrl": "https://arxiv.org",
+      "homepageUrl": "https://arxiv.org",
+      "rssUrls": ["https://arxiv.org/rss/cs.AI", "https://arxiv.org/rss/cs.LG"],
       "searchUrls": [
         "https://arxiv.org/list/cs.AI/recent",
         "https://arxiv.org/list/cs.LG/recent",
@@ -147,6 +161,8 @@
       "id": "aibase-news",
       "name": "AIBase - AI 资讯",
       "baseUrl": "https://www.aibase.com",
+      "homepageUrl": "https://www.aibase.com",
+      "rssUrls": [],
       "searchUrls": [
         "https://www.aibase.com/news",
         "https://www.aibase.com/zh/news"
@@ -172,5 +188,10 @@
     "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
     "requestDelay": 2000,
     "timeout": 30000
+  },
+  "autoCrawler": {
+    "enabled": true,
+    "intervalMinutes": 30,
+    "runOnStart": true
   }
 }

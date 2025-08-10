@@ -65,11 +65,19 @@ export class SimpleStorageManager {
       return
     }
 
-    this.articles.push(article)
+    // 确保文章内容和图片数组存在
+    const articleToSave: ArticleContent = {
+      ...article,
+      content: article.content || '',
+      images: article.images || [],
+      tags: article.tags || []
+    };
+
+    this.articles.push(articleToSave)
     await this.saveArticles()
     
     this.logger.success(
-      `💾 文章已保存: ${article.title} (${article.content.length} 字符, ${article.images.length} 张图片)`
+      `💾 文章已保存: ${articleToSave.title} (${articleToSave.content.length} 字符, ${articleToSave.images.length} 张图片)`
     )
   }
 
