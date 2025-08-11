@@ -1,12 +1,10 @@
 // AI 新闻抓取器 - 专门抓取 AI 相关新闻
 import { consola } from 'consola'
 import { promises as fs } from 'fs'
-import { join } from 'path'
 import { WebClipperAdapter } from './clipper/web-clipper-adapter.js'
 import { SimpleStorageManager } from './storage/simple-storage-manager.js'
 import * as cheerio from 'cheerio'
 import { ofetch } from 'ofetch'
-import { load } from 'jsdom'
 
 const logger = consola.withTag('AINewsCrawler')
 
@@ -49,7 +47,7 @@ interface ArticleInfo {
 }
 
 export class AINewsCrawler {
-  private config: AINewsConfig
+  private config!: AINewsConfig
   private clipper: WebClipperAdapter
   private storage: SimpleStorageManager
   private configPath: string
@@ -77,7 +75,7 @@ export class AINewsCrawler {
       const configData = await fs.readFile(this.configPath, 'utf-8')
       this.config = JSON.parse(configData)
       logger.info(`📋 加载了 ${this.config.sources.length} 个 AI 新闻源`)
-    } catch (error) {
+    } catch (error: any) {
       logger.error('❌ 配置文件加载失败:', error.message)
       throw error
     }
@@ -130,7 +128,7 @@ export class AINewsCrawler {
         // 源之间的延迟
         await this.delay(this.config.globalSettings.requestDelay)
 
-      } catch (error) {
+      } catch (error: any) {
         logger.error(`❌ 处理失败: ${source.name}`, error.message)
         sourceStats[source.name] = 0
       }
@@ -154,7 +152,7 @@ export class AINewsCrawler {
         const rssArticles = await this.extractFromRSS(source)
         articles.push(...rssArticles)
         logger.info(`✅ 从RSS获取到 ${rssArticles.length} 篇文章`)
-      } catch (error) {
+      } catch (error: any) {
         logger.warn(`⚠️ RSS抓取失败: ${source.name}`, error.message)
       }
     }
@@ -220,6 +218,8 @@ export class AINewsCrawler {
         const $ = cheerio.load(xml, { xmlMode: true })
         const items = $('item')
 
+        const rssArticles: any[] = []
+        
         items.each((_, element) => {
           try {
             const title = $(element).find('title').text().trim()
@@ -248,26 +248,82 @@ export class AINewsCrawler {
             
             if (articleLink) {
               const pubDate = pubDateStrFinal ? new Date(pubDateStrFinal) : new Date()
-              articles.push({
+              rssArticles.push({
                 title: title || '无标题',
                 url: articleLink,
-                summary: description || '',
+                rssDescription: description || '',
                 publishTime: pubDate,
-                source: source.name,
-                author: 'Unknown',
-                hash: `ai-news-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                images: [],
-                tags: [...source.tags, 'AI新闻', 'RSS']
+                source: source.name
               })
             }
-          } catch (itemError) {
+          } catch (itemError: any) {
             logger.warn(`⚠️ 解析RSS项失败:`, itemError.message)
           }
         })
 
+        // 对RSS文章进行完整内容提取
+        const maxArticles = Math.min(rssArticles.length, this.config.globalSettings.maxArticlesPerSource)
+        for (let i = 0; i < maxArticles; i++) {
+          const rssArticle = rssArticles[i]
+          try {
+            logger.info(`📄 提取RSS文章内容: ${rssArticle.title}`)
+            
+            // 使用WebClipper提取完整内容
+            const fullArticle = await this.extractArticle(rssArticle.url, source)
+            
+            if (fullArticle) {
+              // 使用RSS中的信息补充或覆盖提取的信息
+              fullArticle.publishTime = rssArticle.publishTime
+              fullArticle.title = rssArticle.title || fullArticle.title
+              
+              // 如果提取的内容太短，使用RSS描述作为备用
+              if (fullArticle.content.length < 100 && rssArticle.rssDescription) {
+                fullArticle.content = rssArticle.rssDescription
+                fullArticle.summary = rssArticle.rssDescription.substring(0, 200) + '...'
+              }
+              
+              articles.push(fullArticle)
+            } else {
+              // 如果内容提取失败，至少保存RSS基本信息
+              articles.push({
+                title: rssArticle.title,
+                content: rssArticle.rssDescription || '内容提取失败',
+                summary: rssArticle.rssDescription ? rssArticle.rssDescription.substring(0, 200) + '...' : '内容提取失败',
+                url: rssArticle.url,
+                publishTime: rssArticle.publishTime,
+                source: source.name,
+                author: 'Unknown',
+                hash: `ai-news-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+                images: [],
+                tags: [...source.tags, 'AI新闻', 'RSS']
+              })
+            }
+            
+            // 文章之间延迟
+            await this.delay(1500)
+            
+          } catch (error: any) {
+            logger.warn(`⚠️ 提取RSS文章内容失败: ${rssArticle.url}`, error.message)
+            
+            // 即使提取失败，也保存基本信息
+            articles.push({
+              title: rssArticle.title,
+              content: rssArticle.rssDescription || '内容提取失败',
+              summary: rssArticle.rssDescription ? rssArticle.rssDescription.substring(0, 200) + '...' : '内容提取失败',
+              url: rssArticle.url,
+              publishTime: rssArticle.publishTime,
+              source: source.name,
+              author: 'Unknown',
+              hash: `ai-news-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+              images: [],
+              tags: [...source.tags, 'AI新闻', 'RSS']
+            })
+          }
+        }
+
         // RSS之间延迟
         await this.delay(1000)
-      } catch (error) {
+      } catch (error: any) {
         logger.warn(`⚠️ 获取RSS失败: ${rssUrl}`, error.message)
       }
     }
@@ -336,13 +392,13 @@ export class AINewsCrawler {
           
           // 文章之间延迟
           await this.delay(1000)
-        } catch (error) {
+        } catch (error: any) {
           logger.warn(`⚠️ 提取首页文章失败: ${articleInfo.url}`, error.message)
         }
       }
 
       return result
-    } catch (error) {
+    } catch (error: any) {
       logger.warn(`⚠️ 首页抓取失败: ${source.homepageUrl}`, error.message)
       return []
     }
@@ -375,7 +431,7 @@ export class AINewsCrawler {
             // 文章之间的延迟
             await this.delay(1000)
             
-          } catch (error) {
+          } catch (error: any) {
             logger.warn(`⚠️ 提取文章失败: ${articleUrl}`, error.message)
           }
         }
@@ -383,7 +439,7 @@ export class AINewsCrawler {
         // 搜索URL之间的延迟
         await this.delay(1500)
 
-      } catch (error) {
+      } catch (error: any) {
         logger.warn(`⚠️ 搜索失败: ${searchUrl}`, error.message)
       }
       
@@ -467,7 +523,7 @@ export class AINewsCrawler {
       // 只返回URL列表
       return articles.map(a => a.url)
 
-    } catch (error) {
+    } catch (error: any) {
       logger.warn(`⚠️ 发现文章URL失败: ${searchUrl}`, error.message)
       return []
     }
@@ -492,7 +548,7 @@ export class AINewsCrawler {
         publishTime: result.metadata.publishTime || new Date(),
         source: source.name,
         author: result.metadata.author || 'Unknown',
-        hash: `ai-news-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        hash: `ai-news-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
         images: result.images.map((imgUrl, index) => ({
           id: `img-${index}`,
           originalUrl: imgUrl,
@@ -505,7 +561,7 @@ export class AINewsCrawler {
         tags: [...source.tags, 'AI新闻', '自动抓取']
       }
 
-    } catch (error) {
+    } catch (error: any) {
       logger.warn(`⚠️ 提取文章失败: ${url}`, error.message)
       return null
     }

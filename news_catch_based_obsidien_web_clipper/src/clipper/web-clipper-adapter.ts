@@ -52,7 +52,7 @@ export class WebClipperAdapter {
       
       return result
       
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`❌ 内容提取失败: ${url}`, error)
       throw new Error(`Failed to extract content from ${url}: ${error.message}`)
     }
