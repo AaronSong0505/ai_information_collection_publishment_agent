@@ -35,10 +35,14 @@ export class WebClipperAdapter {
           'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
           'Accept-Encoding': 'gzip, deflate, br',
           'Connection': 'keep-alive',
-          'Upgrade-Insecure-Requests': '1'
+          'Upgrade-Insecure-Requests': '1',
+          'Cache-Control': 'no-cache'
         },
         timeout: opts.timeout
       })
+
+      // 等待一段时间，让动态内容有时间加载
+      await this.delay(2000)
 
       const $ = cheerio.load(html)
       
@@ -265,12 +269,38 @@ export class WebClipperAdapter {
       'spinner',
       'icon-',
       'logo-small',
-      'avatar-default'
+      'avatar-default',
+      'img-placeholder', // 少数派的占位图
+      'logo_sspai_icon', // 少数派的小图标
+      'thumbnail/!72x72r', // 小头像
+      'thumbnail/!84x84r', // 小头像
+      'qrcode_service', // 二维码
+      'ui/img-placeholder', // UI占位图
+      'avatar/', // 头像目录
+      'icon.png', // 通用图标
+      'logo.png', // 通用logo
+      '.gif?imageMogr2/auto-orient/quality/90/ignore-error/1' // 可能的动态图标
     ]
 
-    return !invalidPatterns.some(pattern => url.includes(pattern)) &&
-           url.length < 2000 && // URL不能太长
-           /\.(jpg|jpeg|png|gif|webp|bmp)(\?|$)/i.test(url) // 必须是图片格式
+    // 检查URL是否有效
+    if (!url || url.length > 2000 || !url.startsWith('http')) {
+      return false
+    }
+
+    // 检查是否包含无效模式
+    if (invalidPatterns.some(pattern => url.includes(pattern))) {
+      return false
+    }
+
+    // 检查文件扩展名
+    const hasValidExtension = /\.(jpg|jpeg|png|gif|webp|bmp)(\?|$)/i.test(url)
+    
+    // 检查图片尺寸参数，过滤掉太小的图片
+    const hasTinySize = /thumbnail\/![0-9]{1,2}x[0-9]{1,2}r/.test(url) || // 小于100x100的缩略图
+                       /w_[0-9]{1,2}[^0-9]/.test(url) || // 宽度小于100的图片
+                       /h_[0-9]{1,2}[^0-9]/.test(url)   // 高度小于100的图片
+
+    return hasValidExtension && !hasTinySize
   }
 
   /**
@@ -368,5 +398,12 @@ export class WebClipperAdapter {
     }
 
     return undefined
+  }
+
+  /**
+   * 延迟函数
+   */
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms))
   }
 }

@@ -1,193 +1,248 @@
 {
   "sources": [
     {
+      "id": "techcrunch-ai",
+      "name": "TechCrunch - AI",
+      "baseUrl": "https://techcrunch.com",
+      "homepageUrl": "https://techcrunch.com/category/artificial-intelligence/",
+      "rssUrls": ["https://techcrunch.com/category/artificial-intelligence/feed/"],
+      "searchUrls": [
+        "https://techcrunch.com/category/artificial-intelligence/",
+        "https://techcrunch.com/tag/ai/",
+        "https://techcrunch.com/tag/openai/",
+        "https://techcrunch.com/tag/machine-learning/"
+      ],
+      "enabled": true,
+      "tags": ["AI", "国际", "时事", "创业"],
+      "selectors": {
+        "articleLinks": ".post-block__title__link, h2 a, .wp-block-tc23-post-picker a",
+        "title": "h1, .article-title, .wp-block-post-title",
+        "content": ".article-content, .entry-content, .wp-block-post-content",
+        "publishTime": ".river-byline__time, .time, .wp-block-post-date"
+      },
+      "keywords": ["artificial intelligence", "AI", "OpenAI", "ChatGPT", "machine learning", "deep learning", "neural network", "startup", "funding"],
+      "interval": 30
+    },
+    {
+      "id": "theverge-ai",
+      "name": "The Verge - AI",
+      "baseUrl": "https://www.theverge.com",
+      "homepageUrl": "https://www.theverge.com/ai-artificial-intelligence",
+      "rssUrls": ["https://www.theverge.com/rss/index.xml"],
+      "searchUrls": [
+        "https://www.theverge.com/ai-artificial-intelligence",
+        "https://www.theverge.com/search?q=artificial+intelligence",
+        "https://www.theverge.com/search?q=OpenAI",
+        "https://www.theverge.com/search?q=ChatGPT"
+      ],
+      "enabled": true,
+      "tags": ["AI", "国际", "时事", "科技"],
+      "selectors": {
+        "articleLinks": ".c-entry-box--compact__title a, h2 a, .c-compact-river__entry a",
+        "title": "h1, .c-page-title, .duet--article--standard h1",
+        "content": ".c-entry-content, .duet--article--standard .duet--article__body",
+        "publishTime": ".c-byline__item time, .duet--article__meta time"
+      },
+      "keywords": ["artificial intelligence", "AI", "OpenAI", "Google", "Microsoft", "ChatGPT", "Gemini", "machine learning"],
+      "interval": 25
+    },
+    {
+      "id": "reuters-ai",
+      "name": "Reuters - AI Technology",
+      "baseUrl": "https://www.reuters.com",
+      "homepageUrl": "https://www.reuters.com/technology/artificial-intelligence/",
+      "rssUrls": ["https://www.reuters.com/technology/artificial-intelligence/rss/"],
+      "searchUrls": [
+        "https://www.reuters.com/technology/artificial-intelligence/",
+        "https://www.reuters.com/search/?query=artificial+intelligence",
+        "https://www.reuters.com/search/?query=OpenAI",
+        "https://www.reuters.com/search/?query=ChatGPT"
+      ],
+      "enabled": true,
+      "tags": ["AI", "国际", "时事", "新闻"],
+      "selectors": {
+        "articleLinks": ".story-card a, .media-story-card__headline__link",
+        "title": "h1, .ArticleHeader_headline",
+        "content": ".StandardArticleBody_body, .ArticleBodyWrapper",
+        "publishTime": ".ArticleHeader_date-time, time"
+      },
+      "keywords": ["artificial intelligence", "AI", "OpenAI", "Google", "Microsoft", "ChatGPT", "technology", "regulation"],
+      "interval": 20
+    },
+    {
+      "id": "hackernews-ai",
+      "name": "Hacker News - AI",
+      "baseUrl": "https://news.ycombinator.com",
+      "homepageUrl": "https://news.ycombinator.com",
+      "rssUrls": ["https://hnrss.org/frontpage"],
+      "searchUrls": [
+        "https://hn.algolia.com/?query=artificial%20intelligence&type=story&dateRange=pastWeek",
+        "https://hn.algolia.com/?query=OpenAI&type=story&dateRange=pastWeek",
+        "https://hn.algolia.com/?query=ChatGPT&type=story&dateRange=pastWeek",
+        "https://hn.algolia.com/?query=machine%20learning&type=story&dateRange=pastWeek"
+      ],
+      "enabled": true,
+      "tags": ["AI", "国际", "技术", "讨论"],
+      "selectors": {
+        "articleLinks": ".storylink, .titleline a",
+        "title": "h1, .title",
+        "content": ".comment, .toptext",
+        "publishTime": ".age, .hnuser"
+      },
+      "keywords": ["artificial intelligence", "AI", "OpenAI", "machine learning", "deep learning", "LLM", "ChatGPT"],
+      "interval": 40
+    },
+    {
       "id": "36kr-ai",
-      "name": "36氪 - AI 频道",
+      "name": "36氪 - AI 大厂动态",
       "baseUrl": "https://36kr.com",
       "homepageUrl": "https://36kr.com",
       "rssUrls": ["https://36kr.com/feed"],
       "searchUrls": [
-        "https://36kr.com/search/articles/人工智能",
-        "https://36kr.com/search/articles/AI",
-        "https://36kr.com/search/articles/机器学习",
+        "https://36kr.com/search/articles/OpenAI",
+        "https://36kr.com/search/articles/百度AI",
+        "https://36kr.com/search/articles/阿里云AI",
+        "https://36kr.com/search/articles/腾讯AI",
+        "https://36kr.com/search/articles/字节AI",
         "https://36kr.com/search/articles/大模型"
       ],
-      "enabled": false,
-      "tags": ["AI", "创业", "科技"],
+      "enabled": true,
+      "tags": ["AI", "国内", "大厂", "商业"],
       "selectors": {
         "articleLinks": ".article-item-title a, .kr-flow-article-title a",
         "title": "h1, .article-title",
         "content": ".article-content, .kr-rich-text-container",
         "publishTime": ".time, .article-info-time"
       },
-      "keywords": ["人工智能", "AI", "机器学习", "深度学习", "大模型", "ChatGPT", "GPT", "神经网络"],
+      "keywords": ["OpenAI", "百度", "阿里", "腾讯", "字节", "华为", "小米", "大模型", "人工智能", "AI", "融资", "IPO"],
       "interval": 30
     },
     {
       "id": "ithome-ai",
-      "name": "IT之家 - AI 新闻",
+      "name": "IT之家 - AI 大厂新闻",
       "baseUrl": "https://www.ithome.com",
       "homepageUrl": "https://www.ithome.com",
       "rssUrls": ["https://www.ithome.com/rss/"],
       "searchUrls": [
-        "https://www.ithome.com/tag/人工智能",
-        "https://www.ithome.com/tag/AI",
-        "https://www.ithome.com/tag/机器学习",
-        "https://www.ithome.com/search?q=ChatGPT"
+        "https://www.ithome.com/search?q=OpenAI",
+        "https://www.ithome.com/search?q=百度AI",
+        "https://www.ithome.com/search?q=阿里AI",
+        "https://www.ithome.com/search?q=腾讯AI",
+        "https://www.ithome.com/search?q=ChatGPT",
+        "https://www.ithome.com/search?q=大模型"
       ],
-      "enabled": false,
-      "tags": ["AI", "科技", "新闻"],
+      "enabled": true,
+      "tags": ["AI", "国内", "大厂", "新闻"],
       "selectors": {
         "articleLinks": ".lst a, .post-title a",
         "title": "h1, .post-title",
         "content": ".post-content, .content",
         "publishTime": ".post-date, .time"
       },
-      "keywords": ["人工智能", "AI", "机器学习", "深度学习", "大模型", "ChatGPT", "OpenAI", "百度", "阿里", "腾讯"],
-      "interval": 20
-    },
-    {
-      "id": "juejin-ai",
-      "name": "掘金 - AI 技术",
-      "baseUrl": "https://juejin.cn",
-      "homepageUrl": "https://juejin.cn",
-      "rssUrls": [],
-      "searchUrls": [
-        "https://juejin.cn/search?query=人工智能",
-        "https://juejin.cn/search?query=AI",
-        "https://juejin.cn/search?query=机器学习",
-        "https://juejin.cn/search?query=深度学习"
-      ],
-      "enabled": true,
-      "tags": ["AI", "技术", "开发"],
-      "selectors": {
-        "articleLinks": ".title-row a, .article-title a",
-        "title": "h1, .article-title",
-        "content": ".markdown-body, .article-content",
-        "publishTime": ".meta-box .time, .publish-time"
-      },
-      "keywords": ["人工智能", "AI", "机器学习", "深度学习", "神经网络", "TensorFlow", "PyTorch", "算法"],
+      "keywords": ["OpenAI", "ChatGPT", "百度", "阿里", "腾讯", "字节", "华为", "小米", "大模型", "人工智能", "AI"],
       "interval": 25
     },
     {
+      "id": "venturebeat-ai",
+      "name": "VentureBeat - AI",
+      "baseUrl": "https://venturebeat.com",
+      "homepageUrl": "https://venturebeat.com/ai/",
+      "rssUrls": ["https://venturebeat.com/category/ai/feed/"],
+      "searchUrls": [
+        "https://venturebeat.com/ai/",
+        "https://venturebeat.com/tag/artificial-intelligence/",
+        "https://venturebeat.com/tag/openai/",
+        "https://venturebeat.com/tag/machine-learning/"
+      ],
+      "enabled": true,
+      "tags": ["AI", "国际", "商业", "创业"],
+      "selectors": {
+        "articleLinks": ".ArticleListing__title-link, h2 a, .post-title a",
+        "title": "h1, .single-post-title",
+        "content": ".article-content, .post-content",
+        "publishTime": ".ArticleListing__date, .post-date"
+      },
+      "keywords": ["artificial intelligence", "AI", "OpenAI", "machine learning", "startup", "funding", "enterprise AI"],
+      "interval": 35
+    },
+    {
+      "id": "mit-tech-ai",
+      "name": "MIT Technology Review - AI",
+      "baseUrl": "https://www.technologyreview.com",
+      "homepageUrl": "https://www.technologyreview.com/topic/artificial-intelligence/",
+      "rssUrls": ["https://www.technologyreview.com/topic/artificial-intelligence/feed/"],
+      "searchUrls": [
+        "https://www.technologyreview.com/topic/artificial-intelligence/",
+        "https://www.technologyreview.com/search/?s=OpenAI",
+        "https://www.technologyreview.com/search/?s=ChatGPT",
+        "https://www.technologyreview.com/search/?s=machine+learning"
+      ],
+      "enabled": true,
+      "tags": ["AI", "国际", "学术", "深度"],
+      "selectors": {
+        "articleLinks": ".teaserItem__title a, h2 a, .contentTitle a",
+        "title": "h1, .contentTitle",
+        "content": ".article-body, .contentBody",
+        "publishTime": ".contentMeta__date, .byline time"
+      },
+      "keywords": ["artificial intelligence", "AI", "machine learning", "deep learning", "research", "OpenAI", "Google AI"],
+      "interval": 60
+    },
+    {
       "id": "solidot-ai",
-      "name": "Solidot - AI 科技",
+      "name": "Solidot - AI 国际动态",
       "baseUrl": "https://www.solidot.org",
       "homepageUrl": "https://www.solidot.org",
       "rssUrls": ["https://www.solidot.org/index.rss"],
       "searchUrls": [
+        "https://www.solidot.org/search.pl?q=OpenAI",
         "https://www.solidot.org/search.pl?q=人工智能",
         "https://www.solidot.org/search.pl?q=AI",
-        "https://www.solidot.org/search.pl?q=机器学习"
+        "https://www.solidot.org/search.pl?q=ChatGPT"
       ],
-      "enabled": false,
-      "tags": ["AI", "开源", "科技"],
+      "enabled": true,
+      "tags": ["AI", "国际", "开源", "科技"],
       "selectors": {
         "articleLinks": ".story-title a, h2 a",
         "title": "h1, .story-title",
         "content": ".story-text, .content",
         "publishTime": ".story-time, .time"
       },
-      "keywords": ["人工智能", "AI", "机器学习", "开源", "算法", "神经网络"],
+      "keywords": ["OpenAI", "人工智能", "AI", "机器学习", "开源", "算法", "神经网络", "ChatGPT"],
       "interval": 45
     },
     {
-      "id": "sspai-ai",
-      "name": "少数派 - AI 效率",
-      "baseUrl": "https://sspai.com",
-      "homepageUrl": "https://sspai.com",
-      "rssUrls": ["https://sspai.com/feed"],
+      "id": "ai-news-aggregator",
+      "name": "AI News - 综合资讯",
+      "baseUrl": "https://artificialintelligence-news.com",
+      "homepageUrl": "https://artificialintelligence-news.com",
+      "rssUrls": ["https://artificialintelligence-news.com/feed/"],
       "searchUrls": [
-        "https://sspai.com/search/post/人工智能",
-        "https://sspai.com/search/post/AI",
-        "https://sspai.com/search/post/ChatGPT"
+        "https://artificialintelligence-news.com/category/news/",
+        "https://artificialintelligence-news.com/?s=OpenAI",
+        "https://artificialintelligence-news.com/?s=ChatGPT"
       ],
       "enabled": true,
-      "tags": ["AI", "效率", "工具"],
+      "tags": ["AI", "国际", "综合", "新闻"],
       "selectors": {
-        "articleLinks": ".article-card-title a, .title a",
-        "title": "h1, .article-title",
-        "content": ".article-body, .content",
-        "publishTime": ".article-meta .time"
+        "articleLinks": ".entry-title a, h2 a",
+        "title": "h1, .entry-title",
+        "content": ".entry-content, .post-content",
+        "publishTime": ".entry-date, .published"
       },
-      "keywords": ["人工智能", "AI", "ChatGPT", "效率工具", "自动化", "AI工具"],
-      "interval": 35
-    },
-    {
-      "id": "techcrunch-ai",
-      "name": "TechCrunch - AI",
-      "baseUrl": "https://techcrunch.com",
-      "homepageUrl": "https://techcrunch.com",
-      "rssUrls": ["https://techcrunch.com/category/artificial-intelligence/feed/"],
-      "searchUrls": [
-        "https://techcrunch.com/category/artificial-intelligence/",
-        "https://techcrunch.com/tag/ai/",
-        "https://techcrunch.com/tag/machine-learning/"
-      ],
-      "enabled": false,
-      "tags": ["AI", "创业", "国际"],
-      "selectors": {
-        "articleLinks": ".post-block__title__link, h2 a",
-        "title": "h1, .article-title",
-        "content": ".article-content, .entry-content",
-        "publishTime": ".river-byline__time, .time"
-      },
-      "keywords": ["artificial intelligence", "AI", "machine learning", "deep learning", "neural network"],
-      "interval": 60
-    },
-    {
-      "id": "arxiv-ai",
-      "name": "arXiv - AI 论文",
-      "baseUrl": "https://arxiv.org",
-      "homepageUrl": "https://arxiv.org",
-      "rssUrls": ["https://arxiv.org/rss/cs.AI", "https://arxiv.org/rss/cs.LG"],
-      "searchUrls": [
-        "https://arxiv.org/list/cs.AI/recent",
-        "https://arxiv.org/list/cs.LG/recent",
-        "https://arxiv.org/list/cs.CL/recent"
-      ],
-      "enabled": false,
-      "tags": ["AI", "学术", "论文"],
-      "selectors": {
-        "articleLinks": ".list-title a",
-        "title": "h1, .title",
-        "content": ".abstract, blockquote",
-        "publishTime": ".list-dateline"
-      },
-      "keywords": ["artificial intelligence", "machine learning", "deep learning", "neural network", "NLP"],
-      "interval": 120
-    },
-    {
-      "id": "aibase-news",
-      "name": "AIBase - AI 资讯",
-      "baseUrl": "https://www.aibase.com",
-      "homepageUrl": "https://www.aibase.com",
-      "rssUrls": [],
-      "searchUrls": [
-        "https://www.aibase.com/news",
-        "https://www.aibase.com/zh/news"
-      ],
-      "enabled": false,
-      "tags": ["AI", "资讯", "工具"],
-      "selectors": {
-        "articleLinks": ".news-item a, .article-title a",
-        "title": "h1, .article-title",
-        "content": ".article-content, .content",
-        "publishTime": ".publish-time, .time"
-      },
-      "keywords": ["人工智能", "AI工具", "AI应用", "机器学习"],
-      "interval": 40
+      "keywords": ["artificial intelligence", "AI", "OpenAI", "ChatGPT", "machine learning", "deep learning", "news"],
+      "interval": 50
     }
   ],
   "globalSettings": {
-    "maxArticlesPerSource": 10,
-    "contentMinLength": 100,
+    "maxArticlesPerSource": 8,
+    "contentMinLength": 200,
     "enableKeywordFiltering": true,
     "keywordMatchThreshold": 1,
-    "excludeKeywords": ["广告", "推广", "营销"],
+    "excludeKeywords": ["广告", "推广", "营销", "赞助", "affiliate", "sponsored", "advertisement"],
     "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-    "requestDelay": 2000,
-    "timeout": 30000
+    "requestDelay": 3000,
+    "timeout": 45000
   },
   "autoCrawler": {
     "enabled": true,

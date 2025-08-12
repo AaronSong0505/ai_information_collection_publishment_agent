@@ -61,6 +61,7 @@ export class ImageProcessor {
    */
   private async downloadImage(url: string, articleId: string, index: number): Promise<ImageInfo | null> {
     if (!url || !this.isValidImageUrl(url)) {
+      this.logger.debug(`🚫 跳过无效图片URL: ${url}`)
       return null
     }
 
@@ -76,22 +77,21 @@ export class ImageProcessor {
       
       const localPath = join(articleDir, filename)
 
-      // 下载图片
-      const response = await ofetch(url, {
-        responseType: 'arrayBuffer',
-        timeout: 30000,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Accept': 'image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-          'Referer': this.getRefererFromUrl(url)
-        }
-      })
+      this.logger.debug(`📥 开始下载图片: ${url}`)
 
+      // 下载图片，带重试机制
+      const response = await this.downloadWithRetry(url, 2)
       const buffer = Buffer.from(response)
       
       // 验证图片数据
       if (!this.isValidImageData(buffer, format)) {
-        this.logger.warn(`⚠️ 无效图片数据: ${url}`)
+        this.logger.warn(`⚠️ 无效图片数据: ${url} (${buffer.length} bytes)`)
+        return null
+      }
+
+      // 检查图片大小是否合理
+      if (buffer.length < 500) {
+        this.logger.warn(`⚠️ 图片太小，可能是占位图: ${url} (${buffer.length} bytes)`)
         return null
       }
 
@@ -111,13 +111,44 @@ export class ImageProcessor {
         height
       }
 
-      this.logger.info(`📥 图片下载成功: ${filename} (${buffer.length} bytes)`)
+      this.logger.info(`✅ 图片下载成功: ${filename} (${buffer.length} bytes, ${width}x${height})`)
       return imageInfo
 
-    } catch (error) {
-      this.logger.error(`❌ 图片下载失败: ${url}`, error.message)
+    } catch (error: any) {
+      this.logger.warn(`❌ 图片下载失败: ${url} - ${error.message}`)
       return null
     }
+  }
+
+  /**
+   * 带重试机制的下载
+   */
+  private async downloadWithRetry(url: string, maxRetries: number): Promise<ArrayBuffer> {
+    let lastError: Error | null = null
+
+    for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+      try {
+        const response = await ofetch(url, {
+          responseType: 'arrayBuffer',
+          timeout: 15000, // 减少超时时间
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+            'Referer': this.getRefererFromUrl(url),
+            'Cache-Control': 'no-cache'
+          }
+        })
+        return response
+      } catch (error: any) {
+        lastError = error
+        if (attempt <= maxRetries) {
+          this.logger.debug(`🔄 重试下载图片 (${attempt}/${maxRetries}): ${url}`)
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt)) // 递增延迟
+        }
+      }
+    }
+
+    throw lastError || new Error('Download failed after retries')
   }
 
   /**
@@ -165,19 +196,50 @@ export class ImageProcessor {
       'placeholder',
       'loading.gif',
       'spinner.gif',
-      't.png'
+      't.png',
+      'img-placeholder',
+      'logo_sspai_icon',
+      'thumbnail/!72x72r',
+      'thumbnail/!84x84r',
+      'qrcode_service',
+      'ui/img-placeholder',
+      'avatar/',
+      'icon.png',
+      'logo.png'
     ]
 
-    return !invalidPatterns.some(pattern => url.includes(pattern)) &&
-           url.length < 2000 &&
-           /^https?:\/\//i.test(url)
+    // 基本URL验证
+    if (!url || url.length > 2000 || !/^https?:\/\//i.test(url)) {
+      return false
+    }
+
+    // 检查无效模式
+    if (invalidPatterns.some(pattern => url.includes(pattern))) {
+      return false
+    }
+
+    // 检查文件扩展名
+    const hasValidExtension = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i.test(url)
+    
+    // 检查是否是太小的缩略图
+    const isTinyThumbnail = /thumbnail\/![0-9]{1,2}x[0-9]{1,2}r/.test(url) ||
+                           /w_[0-9]{1,2}[^0-9]/.test(url) ||
+                           /h_[0-9]{1,2}[^0-9]/.test(url)
+
+    return hasValidExtension && !isTinyThumbnail
   }
 
   /**
    * 验证图片数据
    */
   private isValidImageData(buffer: Buffer, format: string): boolean {
-    if (!buffer || buffer.length < 100) {
+    if (!buffer || buffer.length < 500) { // 提高最小大小要求
+      return false
+    }
+
+    // 检查是否是HTML错误页面
+    const bufferStr = buffer.toString('utf8', 0, Math.min(200, buffer.length))
+    if (bufferStr.includes('<html') || bufferStr.includes('<!DOCTYPE') || bufferStr.includes('<body')) {
       return false
     }
 
@@ -197,8 +259,11 @@ export class ImageProcessor {
                buffer[2] === 0x46 && buffer[3] === 0x46 &&
                buffer[8] === 0x57 && buffer[9] === 0x45 && 
                buffer[10] === 0x42 && buffer[11] === 0x50
+      case 'svg':
+        // SVG是文本格式，检查是否包含SVG标签
+        return bufferStr.includes('<svg') && bufferStr.includes('</svg>')
       default:
-        return buffer.length >= 100
+        return buffer.length >= 500
     }
   }
 

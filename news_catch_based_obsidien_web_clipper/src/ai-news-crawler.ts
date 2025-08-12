@@ -3,6 +3,7 @@ import { consola } from 'consola'
 import { promises as fs } from 'fs'
 import { WebClipperAdapter } from './clipper/web-clipper-adapter.js'
 import { SimpleStorageManager } from './storage/simple-storage-manager.js'
+import { ImageProcessor } from './utils/image-processor.js'
 import * as cheerio from 'cheerio'
 import { ofetch } from 'ofetch'
 
@@ -50,12 +51,14 @@ export class AINewsCrawler {
   private config!: AINewsConfig
   private clipper: WebClipperAdapter
   private storage: SimpleStorageManager
+  private imageProcessor: ImageProcessor
   private configPath: string
 
   constructor(configPath: string = './config/ai-news-sources.json') {
     this.configPath = configPath
     this.clipper = new WebClipperAdapter()
     this.storage = new SimpleStorageManager()
+    this.imageProcessor = new ImageProcessor('./data/images')
   }
 
   /**
@@ -534,32 +537,84 @@ export class AINewsCrawler {
    */
   private async extractArticle(url: string, source: AINewsSource): Promise<any | null> {
     try {
+      logger.info(`📄 开始提取文章: ${url}`)
+      
       const result = await this.clipper.extractContent(url)
       
       if (!result.title || result.content.length < this.config.globalSettings.contentMinLength) {
+        logger.warn(`⚠️ 文章内容不足: ${result.title} (${result.content.length} 字符)`)
         return null
       }
 
-      return {
+      // 生成文章ID
+      const articleId = `ai-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
+      
+      // 处理图片 - 实际下载到本地
+      let processedImages: any[] = []
+      let imageMap = new Map<string, string>()
+      
+      if (result.images && result.images.length > 0) {
+        logger.info(`🖼️ 发现 ${result.images.length} 张图片，开始筛选和下载...`)
+        
+        // 先过滤明显无效的图片URL
+        const validImageUrls = result.images.filter(url => {
+          const isValid = this.isValidImageUrlForCrawler(url)
+          if (!isValid) {
+            logger.debug(`🚫 跳过无效图片: ${url}`)
+          }
+          return isValid
+        })
+        
+        logger.info(`📋 筛选后有效图片: ${validImageUrls.length}/${result.images.length} 张`)
+        
+        if (validImageUrls.length > 0) {
+          try {
+            const imageResult = await this.imageProcessor.processImages(validImageUrls, articleId)
+            processedImages = imageResult.images
+            imageMap = imageResult.imageMap
+            
+            logger.success(`✅ 图片处理完成: ${processedImages.length}/${validImageUrls.length} 张成功下载`)
+          } catch (error: any) {
+            logger.warn(`⚠️ 图片处理失败:`, error.message)
+            // 即使图片处理失败，也保留原始URL信息
+            processedImages = validImageUrls.map((imgUrl, index) => ({
+              id: `img-${index}`,
+              originalUrl: imgUrl,
+              localPath: '',
+              format: 'jpg',
+              size: 0,
+              width: undefined,
+              height: undefined
+            }))
+          }
+        }
+      }
+
+      // 替换内容中的图片URL为本地路径标签
+      let processedContent = result.content
+      if (imageMap.size > 0) {
+        imageMap.forEach((imageId, originalUrl) => {
+          // 将图片URL替换为图片标签
+          const imageTagRegex = new RegExp(originalUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
+          processedContent = processedContent.replace(imageTagRegex, `<|${imageId}|>`)
+        })
+      }
+
+      const article = {
         title: result.title,
-        content: result.content,
+        content: processedContent,
         summary: result.content.substring(0, 200) + '...',
         url: url,
         publishTime: result.metadata.publishTime || new Date(),
         source: source.name,
         author: result.metadata.author || 'Unknown',
-        hash: `ai-news-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-        images: result.images.map((imgUrl, index) => ({
-          id: `img-${index}`,
-          originalUrl: imgUrl,
-          localPath: `./data/images/img-${index}.jpg`,
-          format: 'jpg',
-          size: 0,
-          width: undefined,
-          height: undefined
-        })),
+        hash: articleId,
+        images: processedImages,
         tags: [...source.tags, 'AI新闻', '自动抓取']
       }
+
+      logger.success(`✅ 文章提取成功: ${article.title} (${processedContent.length} 字符, ${processedImages.length} 张图片)`)
+      return article
 
     } catch (error: any) {
       logger.warn(`⚠️ 提取文章失败: ${url}`, error.message)
@@ -700,5 +755,53 @@ export class AINewsCrawler {
     // 尝试解析绝对时间
     const date = new Date(timeStr);
     return isNaN(date.getTime()) ? null : date;
+  }
+
+  /**
+   * 验证图片URL是否有效（爬虫专用）
+   */
+  private isValidImageUrlForCrawler(url: string): boolean {
+    const invalidPatterns = [
+      'data:image/svg+xml',
+      'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP',
+      'placeholder',
+      'loading.gif',
+      'spinner.gif',
+      't.png',
+      'img-placeholder',
+      'logo_sspai_icon',
+      'thumbnail/!72x72r',
+      'thumbnail/!84x84r',
+      'qrcode_service',
+      'ui/img-placeholder',
+      'avatar/',
+      'icon.png',
+      'logo.png',
+      'default-avatar',
+      'no-image',
+      'blank.gif',
+      '1x1.png',
+      'transparent.png'
+    ]
+
+    // 基本URL验证
+    if (!url || url.length > 2000 || !/^https?:\/\//i.test(url)) {
+      return false
+    }
+
+    // 检查无效模式
+    if (invalidPatterns.some(pattern => url.includes(pattern))) {
+      return false
+    }
+
+    // 检查文件扩展名
+    const hasValidExtension = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i.test(url)
+    
+    // 检查是否是太小的缩略图
+    const isTinyThumbnail = /thumbnail\/![0-9]{1,2}x[0-9]{1,2}r/.test(url) ||
+                           /w_[0-9]{1,2}[^0-9]/.test(url) ||
+                           /h_[0-9]{1,2}[^0-9]/.test(url)
+
+    return hasValidExtension && !isTinyThumbnail
   }
 }
