@@ -1,0 +1,199 @@
+{
+  "sources": [
+    {
+      "id": "reddit-ai",
+      "name": "Reddit - AI 讨论",
+      "baseUrl": "https://www.reddit.com",
+      "homepageUrl": "https://www.reddit.com/r/artificial",
+      "rssUrls": [
+        "https://www.reddit.com/r/artificial/.rss",
+        "https://www.reddit.com/r/MachineLearning/.rss",
+        "https://www.reddit.com/r/OpenAI/.rss",
+        "https://www.reddit.com/r/ChatGPT/.rss"
+      ],
+      "searchUrls": [
+        "https://www.reddit.com/r/artificial/hot/",
+        "https://www.reddit.com/r/MachineLearning/hot/",
+        "https://www.reddit.com/r/artificial/top/?t=day",
+        "https://www.reddit.com/search/?q=AI+large+language+model&sort=new&t=day"
+      ],
+      "enabled": true,
+      "tags": ["AI", "社交", "讨论", "Reddit"],
+      "selectors": {
+        "articleLinks": "[data-testid='post-content'] h3 a, .thing .title a",
+        "title": "h1, [data-testid='post-content'] h3",
+        "content": "[data-testid='post-content'] p, .thing .usertext-body",
+        "publishTime": "[data-testid='post-content'] time, .thing .tagline time",
+        "author": "[data-testid='post-content'] [data-testid='author-link'], .thing .author",
+        "engagement": "[data-testid='post-content'] [data-testid='upvote-button'], .thing .score"
+      },
+      "keywords": ["AI", "LLM", "ChatGPT", "transformer", "neural network", "machine learning", "deep learning", "artificial intelligence", "大模型", "人工智能"],
+      "interval": 15,
+      "socialMediaConfig": {
+        "platform": "reddit",
+        "minUpvotes": 50,
+        "minComments": 10,
+        "engagementWeight": 0.3
+      }
+    },
+    {
+      "id": "youtube-ai-channels",
+      "name": "YouTube - AI 频道",
+      "baseUrl": "https://www.youtube.com",
+      "homepageUrl": "https://www.youtube.com/results?search_query=artificial+intelligence",
+      "rssUrls": [
+        "https://www.youtube.com/feeds/videos.xml?channel_id=UC9OeZkIwhzfv-_Cb7fCikLQ",
+        "https://www.youtube.com/feeds/videos.xml?channel_id=UCWN3xxRkmTPmbKwht9FuE5A"
+      ],
+      "searchUrls": [
+        "https://www.youtube.com/results?search_query=AI+news&sp=CAI%253D",
+        "https://www.youtube.com/results?search_query=ChatGPT&sp=CAI%253D",
+        "https://www.youtube.com/results?search_query=machine+learning&sp=CAI%253D"
+      ],
+      "enabled": true,
+      "tags": ["AI", "视频", "教育", "YouTube"],
+      "selectors": {
+        "articleLinks": "#video-title, .ytd-video-renderer #video-title-link",
+        "title": "h1.title, #video-title",
+        "content": "#description-text, .content",
+        "publishTime": "#info-strings yt-formatted-string, .published-time-text",
+        "author": "#channel-name a, .ytd-channel-name",
+        "engagement": "#top-level-buttons-computed yt-formatted-string, .view-count"
+      },
+      "keywords": ["AI", "artificial intelligence", "machine learning", "ChatGPT", "OpenAI", "transformer", "neural network", "大模型", "人工智能", "深度学习"],
+      "interval": 30,
+      "socialMediaConfig": {
+        "platform": "youtube",
+        "minViews": 1000,
+        "minLikes": 50,
+        "engagementWeight": 0.2,
+        "preferredChannels": [
+          "Two Minute Papers",
+          "Lex Fridman",
+          "AI Explained",
+          "Yannic Kilcher"
+        ]
+      }
+    },
+    {
+      "id": "github-ai-trending",
+      "name": "GitHub - AI 热门项目",
+      "baseUrl": "https://github.com",
+      "homepageUrl": "https://github.com/trending?l=python&since=daily",
+      "rssUrls": [],
+      "searchUrls": [
+        "https://github.com/trending?l=python&since=daily",
+        "https://github.com/search?q=AI+language:python&type=repositories&s=updated",
+        "https://github.com/search?q=ChatGPT+language:python&type=repositories&s=updated",
+        "https://github.com/search?q=transformer+language:python&type=repositories&s=updated"
+      ],
+      "enabled": true,
+      "tags": ["AI", "开源", "代码", "GitHub"],
+      "selectors": {
+        "articleLinks": ".Box-row h2 a, .repo-list-item h3 a",
+        "title": "h1, .Box-row h2 a",
+        "content": ".Box-row p, .repo-list-description",
+        "publishTime": ".Box-row relative-time, .repo-list-meta",
+        "author": ".Box-row .text-normal a, .repo-list-name a",
+        "engagement": ".Box-row .octicon-star, .repo-list-stats"
+      },
+      "keywords": ["AI", "artificial intelligence", "machine learning", "transformer", "neural network", "ChatGPT", "LLM", "深度学习", "人工智能"],
+      "interval": 60,
+      "socialMediaConfig": {
+        "platform": "github",
+        "minStars": 100,
+        "minForks": 10,
+        "engagementWeight": 0.4,
+        "preferredLanguages": ["Python", "JavaScript", "TypeScript"]
+      }
+    },
+    {
+      "id": "medium-ai-writers",
+      "name": "Medium - AI 专家文章",
+      "baseUrl": "https://medium.com",
+      "homepageUrl": "https://medium.com/tag/artificial-intelligence",
+      "rssUrls": [
+        "https://medium.com/feed/tag/artificial-intelligence",
+        "https://medium.com/feed/tag/machine-learning",
+        "https://medium.com/feed/tag/chatgpt"
+      ],
+      "searchUrls": [
+        "https://medium.com/tag/artificial-intelligence",
+        "https://medium.com/search?q=AI",
+        "https://medium.com/search?q=ChatGPT",
+        "https://medium.com/search?q=machine%20learning"
+      ],
+      "enabled": true,
+      "tags": ["AI", "文章", "专家", "Medium"],
+      "selectors": {
+        "articleLinks": "article h2 a, .postArticle-content h3 a",
+        "title": "h1, article h2",
+        "content": "article section, .postArticle-content .section-content",
+        "publishTime": "article time, .postMetaInline time",
+        "author": "article a[rel='author'], .postMetaInline a",
+        "engagement": "article button span, .multirecommend-count"
+      },
+      "keywords": ["AI", "artificial intelligence", "machine learning", "ChatGPT", "transformer", "neural network", "deep learning", "LLM", "大模型"],
+      "interval": 45,
+      "socialMediaConfig": {
+        "platform": "medium",
+        "minClaps": 50,
+        "minReadTime": 3,
+        "engagementWeight": 0.25,
+        "preferredAuthors": [
+          "Towards Data Science",
+          "The Startup",
+          "AI in Plain English"
+        ]
+      }
+    },
+    {
+      "id": "linkedin-ai-posts",
+      "name": "LinkedIn - AI 专业动态",
+      "baseUrl": "https://www.linkedin.com",
+      "homepageUrl": "https://www.linkedin.com/search/results/content/?keywords=artificial%20intelligence",
+      "rssUrls": [],
+      "searchUrls": [
+        "https://www.linkedin.com/search/results/content/?keywords=artificial%20intelligence",
+        "https://www.linkedin.com/search/results/content/?keywords=ChatGPT",
+        "https://www.linkedin.com/search/results/content/?keywords=machine%20learning"
+      ],
+      "enabled": false,
+      "tags": ["AI", "专业", "商业", "LinkedIn"],
+      "selectors": {
+        "articleLinks": ".feed-shared-update-v2 .update-components-text a",
+        "title": ".feed-shared-update-v2 .update-components-text span span",
+        "content": ".feed-shared-update-v2 .update-components-text",
+        "publishTime": ".feed-shared-update-v2 .update-components-actor__sub-description time",
+        "author": ".feed-shared-update-v2 .update-components-actor__name",
+        "engagement": ".feed-shared-update-v2 .social-counts-reactions"
+      },
+      "keywords": ["AI", "artificial intelligence", "machine learning", "ChatGPT", "enterprise AI", "business AI", "AI strategy"],
+      "interval": 60,
+      "socialMediaConfig": {
+        "platform": "linkedin", 
+        "minLikes": 20,
+        "minShares": 5,
+        "engagementWeight": 0.3,
+        "requireVerified": true
+      }
+    }
+  ],
+  "globalSettings": {
+    "maxArticlesPerSource": 10,
+    "contentMinLength": 100,
+    "enableKeywordFiltering": true,
+    "keywordMatchThreshold": 1,
+    "excludeKeywords": ["spam", "bot", "fake", "scam", "垃圾", "机器人"],
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "requestDelay": 5000,
+    "timeout": 30000,
+    "socialMediaSettings": {
+      "enableEngagementFiltering": true,
+      "engagementThreshold": 0.1,
+      "maxDailyPosts": 50,
+      "respectRateLimit": true,
+      "useProxies": false
+    }
+  }
+}
