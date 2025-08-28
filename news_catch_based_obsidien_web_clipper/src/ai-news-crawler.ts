@@ -4,8 +4,8 @@ import { promises as fs } from 'fs'
 import { WebClipperAdapter } from './clipper/web-clipper-adapter.js'
 import { SimpleStorageManager } from './storage/simple-storage-manager.js'
 import { ImageProcessor } from './utils/image-processor.js'
+import { NetworkHelper } from './utils/network-helper.js'
 import * as cheerio from 'cheerio'
-import { ofetch } from 'ofetch'
 
 const logger = consola.withTag('AINewsCrawler')
 
@@ -118,7 +118,7 @@ export class AINewsCrawler {
           try {
             await this.storage.saveArticle(article)
             savedArticles++
-          } catch (error) {
+          } catch (error: any) {
             if (!error.message.includes('已存在')) {
               logger.warn(`⚠️ 保存文章失败: ${article.title}`, error.message)
             }
@@ -135,6 +135,13 @@ export class AINewsCrawler {
         logger.error(`❌ 处理失败: ${source.name}`, error.message)
         sourceStats[source.name] = 0
       }
+    }
+
+    // 清理空的图片目录
+    try {
+      await this.imageProcessor.cleanupEmptyDirectories()
+    } catch (error: any) {
+      logger.debug(`⚠️ 清理空目录失败:`, error.message)
     }
 
     logger.success(`🎉 抓取完成: 总计 ${totalArticles} 篇，保存 ${savedArticles} 篇`)
@@ -171,7 +178,7 @@ export class AINewsCrawler {
         )
         articles.push(...newArticles)
         logger.info(`✅ 从首页获取到 ${newArticles.length} 篇新文章`)
-      } catch (error) {
+      } catch (error: any) {
         logger.warn(`⚠️ 首页抓取失败: ${source.name}`, error.message)
       }
     }
@@ -211,11 +218,11 @@ export class AINewsCrawler {
     
     for (const rssUrl of source.rssUrls) {
       try {
-        const xml = await ofetch(rssUrl, {
+        const xml = await NetworkHelper.fetchRSS(rssUrl, {
           timeout: this.config.globalSettings.timeout,
-          headers: {
-            'User-Agent': this.config.globalSettings.userAgent
-          }
+          userAgent: this.config.globalSettings.userAgent,
+          maxRetries: 3,
+          retryDelay: 3000
         })
 
         const $ = cheerio.load(xml, { xmlMode: true })
@@ -264,10 +271,17 @@ export class AINewsCrawler {
           }
         })
 
+        // 去重：根据URL去除重复的RSS文章
+        const uniqueRssArticles = rssArticles.filter((article, index, self) => 
+          index === self.findIndex(a => a.url === article.url)
+        )
+        
+        logger.info(`📋 RSS去重后: ${uniqueRssArticles.length}/${rssArticles.length} 篇文章`)
+        
         // 对RSS文章进行完整内容提取
-        const maxArticles = Math.min(rssArticles.length, this.config.globalSettings.maxArticlesPerSource)
+        const maxArticles = Math.min(uniqueRssArticles.length, this.config.globalSettings.maxArticlesPerSource)
         for (let i = 0; i < maxArticles; i++) {
-          const rssArticle = rssArticles[i]
+          const rssArticle = uniqueRssArticles[i]
           try {
             logger.info(`📄 提取RSS文章内容: ${rssArticle.title}`)
             
@@ -319,7 +333,8 @@ export class AINewsCrawler {
               author: 'Unknown',
               hash: `ai-news-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
               images: [],
-              tags: [...source.tags, 'AI新闻', 'RSS']
+              tags: [...source.tags, 'AI新闻', 'RSS'],
+              is_processed: false  // RSS备用文章默认未处理
             })
           }
         }
@@ -343,11 +358,11 @@ export class AINewsCrawler {
     }
 
     try {
-      const html = await ofetch(source.homepageUrl, {
+      const html = await NetworkHelper.fetchHTML(source.homepageUrl, {
         timeout: this.config.globalSettings.timeout,
-        headers: {
-          'User-Agent': this.config.globalSettings.userAgent
-        }
+        userAgent: this.config.globalSettings.userAgent,
+        maxRetries: 2,
+        retryDelay: 2000
       })
 
       const $ = cheerio.load(html)
@@ -460,76 +475,294 @@ export class AINewsCrawler {
    */
   private async discoverArticleUrls(searchUrl: string, source: AINewsSource): Promise<string[]> {
     try {
-      const html = await ofetch(searchUrl, {
+      const html = await NetworkHelper.fetchHTML(searchUrl, {
         timeout: this.config.globalSettings.timeout,
-        headers: {
-          'User-Agent': this.config.globalSettings.userAgent
-        }
+        userAgent: this.config.globalSettings.userAgent,
+        maxRetries: 2,
+        retryDelay: 1500
       })
 
       const $ = cheerio.load(html)
       const articles: ArticleInfo[] = []
 
-      // 特殊处理掘金网站的搜索结果
-      if (searchUrl.includes('juejin.cn/search')) {
-        // 掘金搜索结果的特殊处理
-        $('.result-item a[href^="/post"]').each((_, element) => {
+      // 针对不同网站的特殊处理
+      if (searchUrl.includes('techcrunch.com')) {
+        // TechCrunch 搜索结果页面
+        $('.post-block__title__link, .wp-block-tc23-post-picker a, h2 a, h3 a').each((_, element) => {
           const href = $(element).attr('href')
-          if (href) {
+          if (href && this.isValidArticleUrl(href, source.baseUrl)) {
             const fullUrl = this.resolveUrl(href, source.baseUrl)
-            if (fullUrl) {
-              // 尝试提取文章发布时间
-              const container = $(element).closest('.result-item')
-              const timeElement = container.find('.username + .info, .info-box .time, .info .time')
-              const timeStr = timeElement.text().trim()
-              const publishTime = this.parseTime(timeStr) || new Date()
-              
-              // 检查是否已存在该URL
-              if (!articles.some(a => a.url === fullUrl)) {
+            if (fullUrl && !articles.some(a => a.url === fullUrl)) {
+              articles.push({
+                url: fullUrl,
+                time: new Date()
+              })
+            }
+          }
+        })
+      } else if (searchUrl.includes('theverge.com')) {
+        // The Verge 搜索结果页面
+        $('.c-entry-box--compact__title a, .c-compact-river__entry a, h2 a, h3 a').each((_, element) => {
+          const href = $(element).attr('href')
+          if (href && this.isValidArticleUrl(href, source.baseUrl)) {
+            const fullUrl = this.resolveUrl(href, source.baseUrl)
+            if (fullUrl && !articles.some(a => a.url === fullUrl)) {
+              articles.push({
+                url: fullUrl,
+                time: new Date()
+              })
+            }
+          }
+        })
+      } else if (searchUrl.includes('venturebeat.com')) {
+        // VentureBeat 搜索结果页面
+        $('.ArticleListing__title-link, .post-title a, h2 a, h3 a').each((_, element) => {
+          const href = $(element).attr('href')
+          if (href && this.isValidArticleUrl(href, source.baseUrl)) {
+            const fullUrl = this.resolveUrl(href, source.baseUrl)
+            if (fullUrl && !articles.some(a => a.url === fullUrl)) {
+              articles.push({
+                url: fullUrl,
+                time: new Date()
+              })
+            }
+          }
+        })
+      } else if (searchUrl.includes('36kr.com')) {
+        // 36氪 搜索结果页面
+        $('.article-item-title a, .kr-flow-article-title a, .search-result-item a, h2 a, h3 a').each((_, element) => {
+          const href = $(element).attr('href')
+          if (href && this.isValidArticleUrl(href, source.baseUrl)) {
+            const fullUrl = this.resolveUrl(href, source.baseUrl)
+            if (fullUrl && !articles.some(a => a.url === fullUrl)) {
+              articles.push({
+                url: fullUrl,
+                time: new Date()
+              })
+            }
+          }
+        })
+      } else if (searchUrl.includes('ithome.com')) {
+        // IT之家 搜索结果页面
+        if (searchUrl.includes('next.ithome.com')) {
+          // 新版IT之家AI页面
+          $('.post-title a, .news-item a, .article-item a, h2 a, h3 a').each((_, element) => {
+            const href = $(element).attr('href')
+            if (href && this.isValidArticleUrl(href, source.baseUrl)) {
+              const fullUrl = this.resolveUrl(href, source.baseUrl)
+              if (fullUrl && !articles.some(a => a.url === fullUrl)) {
                 articles.push({
                   url: fullUrl,
-                  time: publishTime
+                  time: new Date()
                 })
               }
+            }
+          })
+        } else {
+          // 传统IT之家搜索页面
+          $('.lst a, .post-title a, .search-result a, h2 a, h3 a').each((_, element) => {
+            const href = $(element).attr('href')
+            if (href && this.isValidArticleUrl(href, source.baseUrl)) {
+              const fullUrl = this.resolveUrl(href, source.baseUrl)
+              if (fullUrl && !articles.some(a => a.url === fullUrl)) {
+                articles.push({
+                  url: fullUrl,
+                  time: new Date()
+                })
+              }
+            }
+          })
+        }
+      } else if (searchUrl.includes('reuters.com')) {
+        // Reuters 搜索结果页面
+        $('.story-card a, .media-story-card__headline__link, .search-result-item a, h2 a, h3 a').each((_, element) => {
+          const href = $(element).attr('href')
+          if (href && this.isValidArticleUrl(href, source.baseUrl)) {
+            const fullUrl = this.resolveUrl(href, source.baseUrl)
+            if (fullUrl && !articles.some(a => a.url === fullUrl)) {
+              articles.push({
+                url: fullUrl,
+                time: new Date()
+              })
+            }
+          }
+        })
+      } else if (searchUrl.includes('technologyreview.com')) {
+        // MIT Technology Review 搜索结果页面
+        $('.teaserItem__title a, .contentTitle a, .search-result a, h2 a, h3 a').each((_, element) => {
+          const href = $(element).attr('href')
+          if (href && this.isValidArticleUrl(href, source.baseUrl)) {
+            const fullUrl = this.resolveUrl(href, source.baseUrl)
+            if (fullUrl && !articles.some(a => a.url === fullUrl)) {
+              articles.push({
+                url: fullUrl,
+                time: new Date()
+              })
+            }
+          }
+        })
+      } else if (searchUrl.includes('solidot.org')) {
+        // Solidot 搜索结果页面
+        $('.story-title a, .search-result a, h2 a, h3 a').each((_, element) => {
+          const href = $(element).attr('href')
+          if (href && this.isValidArticleUrl(href, source.baseUrl)) {
+            const fullUrl = this.resolveUrl(href, source.baseUrl)
+            if (fullUrl && !articles.some(a => a.url === fullUrl)) {
+              articles.push({
+                url: fullUrl,
+                time: new Date()
+              })
+            }
+          }
+        })
+      } else if (searchUrl.includes('hn.algolia.com')) {
+        // Hacker News Algolia 搜索结果
+        $('.Story_title a, .storylink, h2 a').each((_, element) => {
+          const href = $(element).attr('href')
+          if (href && href.startsWith('http') && !href.includes('news.ycombinator.com')) {
+            // 排除明显的招聘和非AI相关链接
+            const excludePatterns = [
+              'careers', 'jobs', 'hiring', 'recruit',
+              'github.com/.*/(careers|jobs)',
+              'linkedin.com',
+              'angel.co',
+              'wellfound.com'
+            ]
+            
+            const shouldExclude = excludePatterns.some(pattern => {
+              const regex = new RegExp(pattern, 'i')
+              return regex.test(href)
+            })
+            
+            if (!shouldExclude && !articles.some(a => a.url === href)) {
+              articles.push({
+                url: href,
+                time: new Date()
+              })
+            }
+          }
+        })
+      } else if (searchUrl.includes('arxiv.org')) {
+        // arXiv 搜索结果页面
+        $('dt a[title="Abstract"], .list-title a, .title a').each((_, element) => {
+          const href = $(element).attr('href')
+          if (href && (href.includes('/abs/') || href.includes('arxiv.org'))) {
+            const fullUrl = this.resolveUrl(href, source.baseUrl)
+            if (fullUrl && !articles.some(a => a.url === fullUrl)) {
+              articles.push({
+                url: fullUrl,
+                time: new Date()
+              })
+            }
+          }
+        })
+      } else if (searchUrl.includes('paperswithcode.com')) {
+        // Papers With Code 搜索结果页面
+        $('.paper-title a, h3 a').each((_, element) => {
+          const href = $(element).attr('href')
+          if (href && this.isValidArticleUrl(href, source.baseUrl)) {
+            const fullUrl = this.resolveUrl(href, source.baseUrl)
+            if (fullUrl && !articles.some(a => a.url === fullUrl)) {
+              articles.push({
+                url: fullUrl,
+                time: new Date()
+              })
             }
           }
         })
       } else {
-        // 通用处理方式
-        $(source.selectors.articleLinks).each((_, element) => {
-          const href = $(element).attr('href')
-          if (href) {
-            const fullUrl = this.resolveUrl(href, source.baseUrl)
-            if (fullUrl) {
-              // 尝试提取文章发布时间
-              const container = $(element).closest('.article-item, .post, .item, .news-item, .entry, .story')
-              const timeElement = container.find(source.selectors.publishTime)
-              const timeStr = timeElement.text().trim()
-              const publishTime = this.parseTime(timeStr) || new Date()
-              
-              // 检查是否已存在该URL
-              if (!articles.some(a => a.url === fullUrl)) {
+        // 通用处理方式 - 尝试多种常见的文章链接选择器
+        const commonSelectors = [
+          'a[href*="/article"]',
+          'a[href*="/post"]',
+          'a[href*="/news"]',
+          'a[href*="/story"]',
+          '.article-title a',
+          '.post-title a',
+          '.entry-title a',
+          '.story-title a',
+          'h2 a',
+          'h3 a',
+          source.selectors.articleLinks
+        ]
+
+        for (const selector of commonSelectors) {
+          $(selector).each((_, element) => {
+            const href = $(element).attr('href')
+            if (href && this.isValidArticleUrl(href, source.baseUrl)) {
+              const fullUrl = this.resolveUrl(href, source.baseUrl)
+              if (fullUrl && !articles.some(a => a.url === fullUrl)) {
                 articles.push({
                   url: fullUrl,
-                  time: publishTime
+                  time: new Date()
                 })
               }
             }
-          }
-        })
+          })
+          
+          // 如果已经找到足够的文章，就停止
+          if (articles.length >= 20) break
+        }
       }
 
-      // 按时间排序，最新的在前面
+      // 按时间排序，最新的在前面（虽然这里都是当前时间，但保持一致性）
       articles.sort((a, b) => b.time.getTime() - a.time.getTime())
 
       logger.info(`🔗 发现 ${articles.length} 个文章链接`)
-      // 只返回URL列表
-      return articles.map(a => a.url)
+      // 只返回URL列表，限制数量避免过多
+      return articles.slice(0, 15).map(a => a.url)
 
     } catch (error: any) {
       logger.warn(`⚠️ 发现文章URL失败: ${searchUrl}`, error.message)
       return []
     }
+  }
+
+  /**
+   * 验证是否为有效的文章URL
+   */
+  private isValidArticleUrl(url: string, baseUrl: string): boolean {
+    if (!url) return false
+    
+    // 排除无效的链接
+    const invalidPatterns = [
+      '#',
+      'javascript:',
+      'mailto:',
+      '/search',
+      '/tag/',
+      '/category/',
+      '/author/',
+      '/page/',
+      'facebook.com',
+      'twitter.com',
+      'linkedin.com',
+      'youtube.com'
+    ]
+    
+    if (invalidPatterns.some(pattern => url.includes(pattern))) {
+      return false
+    }
+    
+    // 检查是否是文章类型的URL
+    const articlePatterns = [
+      '/article',
+      '/post',
+      '/news',
+      '/story',
+      '/blog',
+      '/content',
+      '/item',
+      '/p/',
+      '/archives',
+      '.htm',
+      '.html',
+      '/20', // 年份模式，如 /2024/
+      '/0/' // IT之家的文章模式
+    ]
+    
+    // 如果是相对路径或者包含文章模式，认为是有效的
+    return !url.startsWith('http') || articlePatterns.some(pattern => url.includes(pattern))
   }
 
   /**
@@ -610,7 +843,8 @@ export class AINewsCrawler {
         author: result.metadata.author || 'Unknown',
         hash: articleId,
         images: processedImages,
-        tags: [...source.tags, 'AI新闻', '自动抓取']
+        tags: [...source.tags, 'AI新闻', '自动抓取'],
+        is_processed: false  // 新抓取的文章默认未处理
       }
 
       logger.success(`✅ 文章提取成功: ${article.title} (${processedContent.length} 字符, ${processedImages.length} 张图片)`)
@@ -623,33 +857,112 @@ export class AINewsCrawler {
   }
 
   /**
-   * 判断是否为 AI 相关内容
+   * 判断是否为 AI 相关内容 - 改进的智能过滤
    */
   private isAIRelated(article: any, source: AINewsSource): boolean {
     if (!this.config.globalSettings.enableKeywordFiltering) {
       return true
     }
 
-    const text = (article.title + ' ' + article.content).toLowerCase()
+    const title = article.title.toLowerCase()
+    const content = article.content.toLowerCase()
+    const text = title + ' ' + content
     
-    // 检查排除关键词
-    const hasExcludeKeywords = this.config.globalSettings.excludeKeywords.some(keyword => 
-      text.includes(keyword.toLowerCase())
-    )
+    // 1. 首先检查强排除关键词（优先级最高）
+    const strongExcludeKeywords = [
+      '招聘', '求职', '工作', '职位', '面试', 'hiring', 'job', 'career', 'recruit',
+      '广告', '推广', '营销', '赞助', 'advertisement', 'sponsored', 'affiliate',
+      '游戏', 'game', 'gaming', '电竞', 'esports', // 游戏相关（除非明确提到AI）
+      '股票', '投资', '理财', 'stock', 'investment', 'finance', // 金融相关（除非明确提到AI）
+      '娱乐', 'entertainment', '明星', 'celebrity', // 娱乐相关
+      '体育', 'sports', '足球', 'football', '篮球', 'basketball' // 体育相关
+    ]
     
-    if (hasExcludeKeywords) {
-      return false
+    const hasStrongExclude = strongExcludeKeywords.some(keyword => text.includes(keyword))
+    
+    // 2. 检查核心AI关键词（高权重）
+    const coreAIKeywords = [
+      'artificial intelligence', 'machine learning', 'deep learning', 'neural network',
+      'LLM', 'large language model', 'VLM', 'vision language model',
+      'transformer', 'attention', 'diffusion', 'RLHF', 'RAG',
+      'chatgpt', 'gpt-4', 'gpt-5', 'claude', 'gemini', 'llama',
+      '大模型', '智能体', 'agent', '多模态', 'multimodal',
+      '神经网络', '深度学习', '机器学习', '人工智能'
+    ]
+    
+    const coreMatches = coreAIKeywords.filter(keyword => text.includes(keyword))
+    
+    // 3. 检查扩展AI关键词（中权重）
+    const extendedAIKeywords = [
+      'AI', 'ai', 'openai', 'anthropic', 'google ai', 'microsoft ai',
+      'computer vision', 'natural language processing', 'nlp',
+      'reinforcement learning', 'generative ai', 'AGI',
+      'prompt', 'fine-tuning', 'training', 'inference',
+      '提示词', '微调', '训练', '推理', '算法', 'algorithm'
+    ]
+    
+    const extendedMatches = extendedAIKeywords.filter(keyword => text.includes(keyword))
+    
+    // 4. 检查应用场景关键词（低权重）
+    const applicationKeywords = [
+      'automation', 'robotics', 'autonomous', 'self-driving',
+      'recommendation', 'prediction', 'classification', 'detection',
+      '自动化', '机器人', '自动驾驶', '推荐系统', '预测', '分类', '检测'
+    ]
+    
+    const applicationMatches = applicationKeywords.filter(keyword => text.includes(keyword))
+    
+    // 5. 计算相关性得分
+    let relevanceScore = 0
+    
+    // 核心关键词：每个3分
+    relevanceScore += coreMatches.length * 3
+    
+    // 扩展关键词：每个2分
+    relevanceScore += extendedMatches.length * 2
+    
+    // 应用场景关键词：每个1分
+    relevanceScore += applicationMatches.length * 1
+    
+    // 标题中的关键词加权（标题更重要）
+    const titleCoreMatches = coreAIKeywords.filter(keyword => title.includes(keyword))
+    const titleExtendedMatches = extendedAIKeywords.filter(keyword => title.includes(keyword))
+    relevanceScore += titleCoreMatches.length * 2 // 标题核心关键词额外加2分
+    relevanceScore += titleExtendedMatches.length * 1 // 标题扩展关键词额外加1分
+    
+    // 6. 特殊情况处理
+    if (hasStrongExclude) {
+      // 如果有强排除关键词，需要更高的AI相关性得分才能通过
+      if (coreMatches.length < 2) {
+        logger.info(`❌ 排除文章: ${article.title} (包含排除关键词且AI相关性不足)`)
+        return false
+      }
+      // 有强排除关键词但AI相关性很强，降低得分但不完全排除
+      relevanceScore = Math.max(0, relevanceScore - 3)
     }
-
-    // 检查 AI 相关关键词
-    const matchedKeywords = source.keywords.filter(keyword => 
-      text.includes(keyword.toLowerCase())
-    )
-
-    const isRelevant = matchedKeywords.length >= this.config.globalSettings.keywordMatchThreshold
+    
+    // 7. 判断是否相关（动态阈值）
+    let threshold = 4 // 基础阈值
+    
+    // 根据来源调整阈值
+    if (source.name.includes('AI') || source.name.includes('人工智能')) {
+      threshold = 2 // AI专门源降低阈值
+    }
+    
+    // 根据文章长度调整阈值
+    if (content.length < 500) {
+      threshold += 1 // 短文章提高阈值
+    }
+    
+    const isRelevant = relevanceScore >= threshold
+    
+    // 8. 记录详细信息
+    const allMatches = [...coreMatches, ...extendedMatches, ...applicationMatches]
     
     if (isRelevant) {
-      logger.info(`✅ AI 相关: ${article.title} (匹配关键词: ${matchedKeywords.join(', ')})`)
+      logger.info(`✅ AI 相关: ${article.title} (得分: ${relevanceScore}/${threshold}, 匹配关键词: ${allMatches.join(', ')})`)
+    } else {
+      logger.info(`❌ 非AI相关: ${article.title} (得分: ${relevanceScore}/${threshold}, 匹配关键词: ${allMatches.join(', ')})`)
     }
 
     return isRelevant
@@ -681,10 +994,12 @@ export class AINewsCrawler {
   }
 
   /**
-   * 延迟函数
+   * 延迟函数 - 添加随机延迟避免被识别为爬虫
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms))
+    // 添加 ±20% 的随机延迟
+    const randomDelay = ms + (Math.random() - 0.5) * 0.4 * ms
+    return new Promise(resolve => setTimeout(resolve, Math.max(1000, randomDelay)))
   }
 
   /**
@@ -727,13 +1042,6 @@ export class AINewsCrawler {
    */
   private parseTime(timeStr: string): Date | null {
     if (!timeStr) return null;
-    
-    // 支持多种时间格式
-    const formats = [
-      'YYYY-MM-DD HH:mm:ss',
-      'YYYY-MM-DD',
-      'MM-DD HH:mm',
-    ];
     
     // 解析相对时间
     if (timeStr.includes('刚刚')) {
@@ -781,7 +1089,10 @@ export class AINewsCrawler {
       'no-image',
       'blank.gif',
       '1x1.png',
-      'transparent.png'
+      'transparent.png',
+      'cdn-avatars.huggingface.co', // 过滤掉Hugging Face头像
+      'papers-by.png', // 过滤掉Papers With Code的logo
+      'solidot-s.gif' // 过滤掉Solidot的小图标
     ]
 
     // 基本URL验证

@@ -42,7 +42,8 @@ export class SimpleStorageManager {
       const data = await fs.readFile(this.articlesFile, 'utf-8')
       this.articles = JSON.parse(data).map((article: any) => ({
         ...article,
-        publishTime: new Date(article.publishTime)
+        publishTime: new Date(article.publishTime),
+        is_processed: article.is_processed ?? false  // 兼容旧数据，默认为未处理
       }))
       this.logger.info(`📚 加载了 ${this.articles.length} 篇文章`)
     } catch (error) {
@@ -65,12 +66,13 @@ export class SimpleStorageManager {
       return
     }
 
-    // 确保文章内容和图片数组存在
+    // 确保文章内容和图片数组存在，并设置默认的数据清洗状态
     const articleToSave: ArticleContent = {
       ...article,
       content: article.content || '',
       images: article.images || [],
-      tags: article.tags || []
+      tags: article.tags || [],
+      is_processed: false  // 新文章默认未处理
     };
 
     this.articles.push(articleToSave)
@@ -287,6 +289,120 @@ export class SimpleStorageManager {
     
     this.logger.success(`💾 数据备份完成: ${backupPath}`)
     return backupPath
+  }
+
+  /**
+   * 标记文章为已处理
+   */
+  async markAsProcessed(articleHash: string): Promise<boolean> {
+    const article = this.articles.find(a => a.hash === articleHash)
+    if (article) {
+      article.is_processed = true
+      await this.saveArticles()
+      this.logger.success(`✅ 文章已标记为已处理: ${article.title}`)
+      return true
+    }
+    this.logger.warn(`⚠️ 未找到文章: ${articleHash}`)
+    return false
+  }
+
+  /**
+   * 批量标记文章为已处理
+   */
+  async markMultipleAsProcessed(articleHashes: string[]): Promise<{
+    processed: number
+    notFound: number
+  }> {
+    let processed = 0
+    let notFound = 0
+
+    for (const hash of articleHashes) {
+      const article = this.articles.find(a => a.hash === hash)
+      if (article) {
+        article.is_processed = true
+        processed++
+      } else {
+        notFound++
+      }
+    }
+
+    if (processed > 0) {
+      await this.saveArticles()
+      this.logger.success(`✅ 批量标记完成: ${processed} 篇已处理, ${notFound} 篇未找到`)
+    }
+
+    return { processed, notFound }
+  }
+
+  /**
+   * 获取未处理的文章
+   */
+  getUnprocessedArticles(limit?: number): ArticleContent[] {
+    const unprocessed = this.articles.filter(article => !article.is_processed)
+    return limit ? unprocessed.slice(0, limit) : unprocessed
+  }
+
+  /**
+   * 获取已处理的文章
+   */
+  getProcessedArticles(limit?: number): ArticleContent[] {
+    const processed = this.articles.filter(article => article.is_processed)
+    return limit ? processed.slice(0, limit) : processed
+  }
+
+  /**
+   * 获取处理状态统计
+   */
+  getProcessingStats(): {
+    total: number
+    processed: number
+    unprocessed: number
+    processingRate: number
+  } {
+    const total = this.articles.length
+    const processed = this.articles.filter(a => a.is_processed).length
+    const unprocessed = total - processed
+    const processingRate = total > 0 ? Math.round((processed / total) * 100) : 0
+
+    return {
+      total,
+      processed,
+      unprocessed,
+      processingRate
+    }
+  }
+
+  /**
+   * 重置处理状态
+   */
+  async resetProcessingStatus(articleHashes?: string[]): Promise<number> {
+    let resetCount = 0
+
+    if (articleHashes) {
+      // 重置指定文章
+      for (const hash of articleHashes) {
+        const article = this.articles.find(a => a.hash === hash)
+        if (article && article.is_processed) {
+          article.is_processed = false
+          resetCount++
+        }
+      }
+    } else {
+      // 重置所有文章
+      this.articles.forEach(article => {
+        if (article.is_processed) {
+          article.is_processed = false
+          resetCount++
+        }
+      })
+    }
+
+    if (resetCount > 0) {
+      await this.saveArticles()
+      this.logger.success(`✅ 重置处理状态: ${resetCount} 篇文章`)
+    }
+
+    return resetCount
   }
 
   /**

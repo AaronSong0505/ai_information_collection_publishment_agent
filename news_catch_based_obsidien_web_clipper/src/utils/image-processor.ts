@@ -1,8 +1,8 @@
 // 图片处理器 - 复用现有的图片标签功能
 import { promises as fs } from 'fs'
 import { join, dirname } from 'path'
-import { ofetch } from 'ofetch'
 import { consola } from 'consola'
+import { NetworkHelper } from './network-helper.js'
 import type { ImageInfo } from '../types/index.js'
 
 export class ImageProcessor {
@@ -70,12 +70,6 @@ export class ImageProcessor {
       const imageId = this.generateImageId(index)
       const format = this.getImageFormat(url)
       const filename = `${imageId}.${format}`
-      
-      // 确保目录存在
-      const articleDir = join(this.baseDir, articleId)
-      await this.ensureDir(articleDir)
-      
-      const localPath = join(articleDir, filename)
 
       this.logger.debug(`📥 开始下载图片: ${url}`)
 
@@ -94,6 +88,12 @@ export class ImageProcessor {
         this.logger.warn(`⚠️ 图片太小，可能是占位图: ${url} (${buffer.length} bytes)`)
         return null
       }
+
+      // 只有在图片验证通过后才创建目录
+      const articleDir = join(this.baseDir, articleId)
+      await this.ensureDir(articleDir)
+      
+      const localPath = join(articleDir, filename)
 
       // 保存图片
       await fs.writeFile(localPath, buffer)
@@ -124,13 +124,14 @@ export class ImageProcessor {
    * 带重试机制的下载
    */
   private async downloadWithRetry(url: string, maxRetries: number): Promise<ArrayBuffer> {
+    // 直接使用ofetch获取ArrayBuffer
+    const { ofetch } = await import('ofetch')
+    
     let lastError: Error | null = null
-
     for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
       try {
-        const response = await ofetch(url, {
-          responseType: 'arrayBuffer',
-          timeout: 15000, // 减少超时时间
+        // 使用fetch API获取响应，然后转换为ArrayBuffer
+        const response = await fetch(url, {
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             'Accept': 'image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
@@ -138,16 +139,21 @@ export class ImageProcessor {
             'Cache-Control': 'no-cache'
           }
         })
-        return response
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+        
+        return await response.arrayBuffer()
       } catch (error: any) {
         lastError = error
         if (attempt <= maxRetries) {
           this.logger.debug(`🔄 重试下载图片 (${attempt}/${maxRetries}): ${url}`)
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt)) // 递增延迟
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
         }
       }
     }
-
+    
     throw lastError || new Error('Download failed after retries')
   }
 
@@ -230,10 +236,10 @@ export class ImageProcessor {
   }
 
   /**
-   * 验证图片数据
+   * 验证图片数据 - 改进的验证逻辑
    */
   private isValidImageData(buffer: Buffer, format: string): boolean {
-    if (!buffer || buffer.length < 500) { // 提高最小大小要求
+    if (!buffer || buffer.length < 100) { // 降低最小大小要求
       return false
     }
 
@@ -243,27 +249,45 @@ export class ImageProcessor {
       return false
     }
 
-    // 基本格式验证
+    // 检查是否是错误信息
+    if (bufferStr.includes('404') || bufferStr.includes('Not Found') || bufferStr.includes('Error')) {
+      return false
+    }
+
+    // 更宽松的格式验证
     switch (format.toLowerCase()) {
       case 'png':
-        return buffer[0] === 0x89 && buffer[1] === 0x50 && 
+        // PNG文件头：89 50 4E 47 0D 0A 1A 0A
+        return buffer.length >= 8 && 
+               buffer[0] === 0x89 && buffer[1] === 0x50 && 
                buffer[2] === 0x4E && buffer[3] === 0x47
       case 'jpg':
       case 'jpeg':
-        return buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF
+        // JPEG文件头：FF D8 FF
+        return buffer.length >= 3 && 
+               buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF
       case 'gif':
-        return buffer[0] === 0x47 && buffer[1] === 0x49 && 
+        // GIF文件头：47 49 46 38
+        return buffer.length >= 6 && 
+               buffer[0] === 0x47 && buffer[1] === 0x49 && 
                buffer[2] === 0x46 && buffer[3] === 0x38
       case 'webp':
-        return buffer[0] === 0x52 && buffer[1] === 0x49 && 
+        // WebP文件头：52 49 46 46 ... 57 45 42 50
+        return buffer.length >= 12 && 
+               buffer[0] === 0x52 && buffer[1] === 0x49 && 
                buffer[2] === 0x46 && buffer[3] === 0x46 &&
                buffer[8] === 0x57 && buffer[9] === 0x45 && 
                buffer[10] === 0x42 && buffer[11] === 0x50
+      case 'bmp':
+        // BMP文件头：42 4D
+        return buffer.length >= 2 && 
+               buffer[0] === 0x42 && buffer[1] === 0x4D
       case 'svg':
         // SVG是文本格式，检查是否包含SVG标签
-        return bufferStr.includes('<svg') && bufferStr.includes('</svg>')
+        return bufferStr.includes('<svg') || bufferStr.includes('<?xml')
       default:
-        return buffer.length >= 500
+        // 对于未知格式，只要不是明显的错误页面就接受
+        return buffer.length >= 100 && !bufferStr.includes('<html')
     }
   }
 
@@ -326,6 +350,33 @@ export class ImageProcessor {
       if ((error as any).code !== 'EEXIST') {
         throw error
       }
+    }
+  }
+
+  /**
+   * 清理空的图片目录
+   */
+  async cleanupEmptyDirectories(): Promise<void> {
+    try {
+      const entries = await fs.readdir(this.baseDir, { withFileTypes: true })
+      
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          const dirPath = join(this.baseDir, entry.name)
+          try {
+            const files = await fs.readdir(dirPath)
+            if (files.length === 0) {
+              await fs.rmdir(dirPath)
+              this.logger.info(`🗑️ 清理空目录: ${entry.name}`)
+            }
+          } catch (error) {
+            // 忽略清理错误
+            this.logger.debug(`⚠️ 清理目录失败: ${entry.name}`)
+          }
+        }
+      }
+    } catch (error) {
+      this.logger.debug(`⚠️ 清理空目录失败:`, (error as any).message)
     }
   }
 }

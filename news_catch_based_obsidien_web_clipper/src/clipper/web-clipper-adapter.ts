@@ -1,7 +1,7 @@
 // 简单 Web Clipper 适配器 - 备用方案
 import * as cheerio from 'cheerio'
-import { ofetch } from 'ofetch'
 import { consola } from 'consola'
+import { NetworkHelper } from '../utils/network-helper.js'
 import type { ClipperOptions, ClipperResult } from '../types/index.js'
 
 /**
@@ -27,18 +27,12 @@ export class WebClipperAdapter {
     this.logger.info(`🔍 开始提取内容: ${url}`)
     
     try {
-      // 获取页面HTML
-      const html = await ofetch(url, {
-        headers: {
-          'User-Agent': opts.userAgent!,
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-          'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-          'Accept-Encoding': 'gzip, deflate, br',
-          'Connection': 'keep-alive',
-          'Upgrade-Insecure-Requests': '1',
-          'Cache-Control': 'no-cache'
-        },
-        timeout: opts.timeout
+      // 获取页面HTML（带重试机制）
+      const html = await NetworkHelper.fetchHTML(url, {
+        timeout: opts.timeout,
+        userAgent: opts.userAgent!,
+        maxRetries: 3,
+        retryDelay: 2000
       })
 
       // 等待一段时间，让动态内容有时间加载

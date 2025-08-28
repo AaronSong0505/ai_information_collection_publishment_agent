@@ -18,6 +18,7 @@
     "manage-sources": "tsx src/manage-sources.ts",
     "config": "tsx src/config-cli.ts",
     "auto-crawl": "tsx src/auto-ai-crawler.ts",
+    "data-processing": "tsx src/data-processing-demo.ts",
     "clean": "rimraf dist data/articles.json data/images/*",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write src/**/*.ts"

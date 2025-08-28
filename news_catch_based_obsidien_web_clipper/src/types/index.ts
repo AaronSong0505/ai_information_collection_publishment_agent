@@ -40,6 +40,7 @@ export interface ArticleContent {
   }>
   tags: string[]
   imageMap?: Map<string, string>
+  is_processed: boolean  // 数据清洗状态标记
 }
 
 export interface ProcessingResult {
