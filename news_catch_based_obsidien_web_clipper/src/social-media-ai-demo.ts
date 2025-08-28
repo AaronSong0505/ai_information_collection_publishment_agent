@@ -9,7 +9,7 @@ async function runSocialMediaDemo() {
   
   try {
     // 1. 初始化社交媒体 AI 新闻爬虫
-    const crawler = new SocialMediaAICrawler()
+    const crawler = new SocialMediaAICrawler('./config/social-media-ai-sources.json')
     await crawler.init()
     
     // 2. 显示启用的社交媒体新闻源

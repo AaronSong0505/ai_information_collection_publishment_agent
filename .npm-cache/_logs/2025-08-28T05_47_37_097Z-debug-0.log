@@ -1,0 +1,26 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js
+1 info using npm@10.9.2
+2 info using node@v22.15.0
+3 silly config load:file:C:\Program Files\nodejs\node_modules\npm\npmrc
+4 silly config load:file:D:\tools_work\self-project-dev\ai_agent\.npmrc
+5 silly config load:file:C:\Users\Aaron Song\.npmrc
+6 silly config load:file:C:\Users\Aaron Song\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm install
+8 verbose argv "install"
+9 verbose logfile logs-max:10 dir:D:\tools_work\self-project-dev\ai_agent\.npm-cache\_logs\2025-08-28T05_47_37_097Z-
+10 verbose logfile D:\tools_work\self-project-dev\ai_agent\.npm-cache\_logs\2025-08-28T05_47_37_097Z-debug-0.log
+11 silly logfile start cleaning logs, removing 1 files
+12 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
+13 silly logfile done cleaning log files
+14 silly idealTree buildDeps
+15 verbose shrinkwrap failed to load node_modules/.package-lock.json out of date, updated: node_modules
+16 silly reify moves {}
+17 silly audit bulk request { pnpm: [ '10.14.0' ] }
+18 http fetch POST 200 https://registry.npmjs.org/-/npm/v1/security/advisories/bulk 588ms
+19 silly audit report {}
+20 verbose cwd D:\tools_work\self-project-dev\ai_agent
+21 verbose os Windows_NT 10.0.26100
+22 verbose node v22.15.0
+23 verbose npm  v10.9.2
+24 verbose exit 0
+25 info ok

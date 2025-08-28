@@ -5,13 +5,13 @@
 4 silly config load:file:D:\tools_work\self-project-dev\ai_agent\.npmrc
 5 silly config load:file:C:\Users\Aaron Song\.npmrc
 6 silly config load:file:C:\Users\Aaron Song\AppData\Roaming\npm\etc\npmrc
-7 verbose title npm run example:image-usage
-8 verbose argv "run" "example:image-usage"
-9 verbose logfile logs-max:10 dir:D:\tools_work\self-project-dev\ai_agent\.npm-cache\_logs\2025-08-07T08_08_51_452Z-
-10 verbose logfile D:\tools_work\self-project-dev\ai_agent\.npm-cache\_logs\2025-08-07T08_08_51_452Z-debug-0.log
+7 verbose title npm run demo-ai
+8 verbose argv "run" "demo-ai"
+9 verbose logfile logs-max:10 dir:D:\tools_work\self-project-dev\ai_agent\.npm-cache\_logs\2025-08-28T04_16_20_233Z-
+10 verbose logfile D:\tools_work\self-project-dev\ai_agent\.npm-cache\_logs\2025-08-28T04_16_20_233Z-debug-0.log
 11 silly logfile start cleaning logs, removing 1 files
 12 silly logfile done cleaning log files
-13 verbose stack Error: Missing script: "example:image-usage"
+13 verbose stack Error: Missing script: "demo-ai"
 13 verbose stack
 13 verbose stack To see a list of scripts, run:
 13 verbose stack   npm run
@@ -19,7 +19,7 @@
 13 verbose stack     at async RunScript.exec (C:\Program Files\nodejs\node_modules\npm\lib\commands\run-script.js:40:7)
 13 verbose stack     at async Npm.exec (C:\Program Files\nodejs\node_modules\npm\lib\npm.js:207:9)
 13 verbose stack     at async module.exports (C:\Program Files\nodejs\node_modules\npm\lib\cli\entry.js:74:5)
-14 error Missing script: "example:image-usage"
+14 error Missing script: "demo-ai"
 14 error
 14 error To see a list of scripts, run:
 14 error   npm run
@@ -29,4 +29,4 @@
 18 verbose npm  v10.9.2
 19 verbose exit 1
 20 verbose code 1
-21 error A complete log of this run can be found in: D:\tools_work\self-project-dev\ai_agent\.npm-cache\_logs\2025-08-07T08_08_51_452Z-debug-0.log
+21 error A complete log of this run can be found in: D:\tools_work\self-project-dev\ai_agent\.npm-cache\_logs\2025-08-28T04_16_20_233Z-debug-0.log

@@ -20,19 +20,19 @@
       "enabled": true,
       "tags": ["AI", "社交", "讨论", "Reddit"],
       "selectors": {
-        "articleLinks": "[data-testid='post-content'] h3 a, .thing .title a",
-        "title": "h1, [data-testid='post-content'] h3",
-        "content": "[data-testid='post-content'] p, .thing .usertext-body",
-        "publishTime": "[data-testid='post-content'] time, .thing .tagline time",
-        "author": "[data-testid='post-content'] [data-testid='author-link'], .thing .author",
-        "engagement": "[data-testid='post-content'] [data-testid='upvote-button'], .thing .score"
+        "articleLinks": "[data-testid='post-content'] h3 a, .thing .title a, shreddit-post h3 a, faceplate-tracker a[slot='full-post-link'], article h3 a, [data-click-id='body'] h3 a, .Post h3 a",
+        "title": "h1, [data-testid='post-content'] h3, shreddit-post h3, .thing .title, [data-click-id='body'] h3, .Post h3",
+        "content": "[data-testid='post-content'] p, .thing .usertext-body, shreddit-post [slot='text-body'], [data-click-id='body'] .md, .Post .md",
+        "publishTime": "[data-testid='post-content'] time, .thing .tagline time, shreddit-post time, [data-click-id='body'] time, .Post time",
+        "author": "[data-testid='post-content'] [data-testid='author-link'], .thing .author, shreddit-post [slot='credit-bar'] a, [data-click-id='body'] .author, .Post .author",
+        "engagement": "[data-testid='post-content'] [data-testid='upvote-button'], .thing .score, shreddit-post [aria-label*='upvote'], [data-click-id='body'] .score, .Post .score"
       },
       "keywords": ["AI", "LLM", "ChatGPT", "transformer", "neural network", "machine learning", "deep learning", "artificial intelligence", "大模型", "人工智能"],
       "interval": 15,
       "socialMediaConfig": {
         "platform": "reddit",
-        "minUpvotes": 50,
-        "minComments": 10,
+        "minUpvotes": 5,
+        "minComments": 2,
         "engagementWeight": 0.3
       }
     },
@@ -64,8 +64,8 @@
       "interval": 30,
       "socialMediaConfig": {
         "platform": "youtube",
-        "minViews": 1000,
-        "minLikes": 50,
+        "minViews": 100,
+        "minLikes": 5,
         "engagementWeight": 0.2,
         "preferredChannels": [
           "Two Minute Papers",
@@ -101,8 +101,8 @@
       "interval": 60,
       "socialMediaConfig": {
         "platform": "github",
-        "minStars": 100,
-        "minForks": 10,
+        "minStars": 10,
+        "minForks": 2,
         "engagementWeight": 0.4,
         "preferredLanguages": ["Python", "JavaScript", "TypeScript"]
       }
@@ -137,8 +137,8 @@
       "interval": 45,
       "socialMediaConfig": {
         "platform": "medium",
-        "minClaps": 50,
-        "minReadTime": 3,
+        "minClaps": 3,
+        "minReadTime": 2,
         "engagementWeight": 0.25,
         "preferredAuthors": [
           "Towards Data Science",
@@ -172,8 +172,8 @@
       "interval": 60,
       "socialMediaConfig": {
         "platform": "linkedin", 
-        "minLikes": 20,
-        "minShares": 5,
+        "minLikes": 2,
+        "minShares": 1,
         "engagementWeight": 0.3,
         "requireVerified": true
       }
@@ -190,7 +190,7 @@
     "timeout": 30000,
     "socialMediaSettings": {
       "enableEngagementFiltering": true,
-      "engagementThreshold": 0.1,
+      "engagementThreshold": 0.01,
       "maxDailyPosts": 50,
       "respectRateLimit": true,
       "useProxies": false

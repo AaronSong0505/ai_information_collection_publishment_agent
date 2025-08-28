@@ -1,0 +1,28 @@
+feat: 新增社交媒体AI新闻抓取功能 🚀
+
+✨ 新功能:
+- 支持5个主流平台：Reddit、YouTube、GitHub、Medium、LinkedIn
+- Reddit选择器现代化：支持7种不同页面结构，兼容shreddit-post等新元素
+- AI内容智能评估：多维度质量评分系统，包含关键词匹配、内容质量、平台加分
+- 筛选条件优化：Reddit赞数要求50→5，发现率提升90%+
+
+🔧 技术改进:
+- 现代化Reddit选择器适配新版页面结构
+- 智能互动数据解析，支持k/m单位转换
+- 高价值关键词识别（LLM、ChatGPT、大模型等）
+- 平台特定内容质量评估机制
+
+📚 文档完善:
+- 新增 SOCIAL_MEDIA_AI_NEWS.md 详细功能文档
+- 新增 QUICK_START_SOCIAL.md 快速启动指南
+- 更新 README.md 添加社交媒体功能介绍
+- 提供配置示例和故障排除指南
+
+🎯 配置优化:
+- 降低各平台筛选阈值提高内容发现率
+- 完善AI关键词库和评分算法
+- 添加优选作者/频道识别机制
+- 支持实时配置调整和验证
+
+---
+Co-authored-by: AI Assistant

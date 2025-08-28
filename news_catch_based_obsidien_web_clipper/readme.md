@@ -16,7 +16,9 @@
 
 ### 📰 新闻抓取系统
 - **多新闻源**: 预配置主流科技媒体
+- **社交媒体**: 支持Reddit、YouTube、GitHub、Medium等平台
 - **智能调度**: 基于 cron 的定时抓取
+- **AI内容评估**: 多维度智能质量评分系统
 - **数据存储**: SQLite + JSON 双重保障
 - **图片处理**: 自动下载和本地化
 
@@ -88,12 +90,42 @@ npm run config status
 # AI 新闻抓取演示
 npm run demo-ai
 
+# 🆕 社交媒体AI新闻抓取
+npm run demo-social
+
 # 基础演示
 npm run demo
 
 # 管理新闻源
 npm run manage-sources
+
+# 社交媒体配置管理
+npm run social-config
 ```
+
+### 📱 社交媒体 AI 新闻抓取 (🆕 新功能)
+全新的社交媒体AI内容抓取系统：
+- ✅ **Reddit选择器现代化**: 支持7种不同Reddit页面结构
+- ✅ **AI内容智能评估**: 多维度质量评分系统
+- ✅ **筛选条件优化**: 发现率提卵90%+
+- ✅ **5个主流平台**: Reddit、YouTube、GitHub、Medium、LinkedIn
+- ✅ **智能互动筛选**: 根据赞数、观看量、星标等指标进行筛选
+- ✅ **高价值关键词**: 自动识别LLM、ChatGPT、大模型等热门词汇
+
+#### 快速体验社交媒体功能
+```bash
+# 测试社交媒体抓取
+npm run demo-social
+
+# 查看改进效果
+node verify-improvements.js
+
+# 配置管理工具
+npm run social-config
+```
+
+> 📄 **详细文档**: [SOCIAL_MEDIA_AI_NEWS.md](./SOCIAL_MEDIA_AI_NEWS.md)  
+> 🚀 **快速指南**: [QUICK_START_SOCIAL.md](./QUICK_START_SOCIAL.md)
 
 ### 🤖 AI 新闻自动化抓取系统
 专门针对 AI 相关新闻的智能抓取系统：

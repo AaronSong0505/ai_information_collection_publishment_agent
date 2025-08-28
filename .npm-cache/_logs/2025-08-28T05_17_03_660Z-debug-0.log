@@ -1,0 +1,37 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js
+1 info using npm@10.9.2
+2 info using node@v22.15.0
+3 silly config load:file:C:\Program Files\nodejs\node_modules\npm\npmrc
+4 silly config load:file:D:\tools_work\self-project-dev\ai_agent\.npmrc
+5 silly config load:file:C:\Users\Aaron Song\.npmrc
+6 silly config load:file:C:\Users\Aaron Song\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm exec tsx src/ai-news-demo.ts
+8 verbose argv "exec" "--" "tsx" "src/ai-news-demo.ts"
+9 verbose logfile logs-max:10 dir:D:\tools_work\self-project-dev\ai_agent\.npm-cache\_logs\2025-08-28T05_17_03_660Z-
+10 verbose logfile D:\tools_work\self-project-dev\ai_agent\.npm-cache\_logs\2025-08-28T05_17_03_660Z-debug-0.log
+11 silly logfile start cleaning logs, removing 1 files
+12 silly logfile done cleaning log files
+13 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
+14 verbose shrinkwrap failed to load node_modules/.package-lock.json out of date, updated: node_modules
+15 http fetch GET 200 https://registry.npmjs.org/tsx 457ms (cache updated)
+16 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
+17 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
+18 verbose stack Error: canceled
+18 verbose stack     at Interface.<anonymous> (C:\Program Files\nodejs\node_modules\npm\node_modules\read\dist\commonjs\read.js:89:21)
+18 verbose stack     at Interface.emit (node:events:518:28)
+18 verbose stack     at [_ttyWrite] [as _ttyWrite] (node:internal/readline/interface:1128:18)
+18 verbose stack     at ReadStream.onkeypress (node:internal/readline/interface:267:20)
+18 verbose stack     at ReadStream.emit (node:events:518:28)
+18 verbose stack     at emitKeys (node:internal/readline/utils:370:14)
+18 verbose stack     at emitKeys.next (<anonymous>)
+18 verbose stack     at ReadStream.onData (node:internal/readline/emitKeypressEvents:64:36)
+18 verbose stack     at ReadStream.emit (node:events:518:28)
+18 verbose stack     at addChunk (node:internal/streams/readable:561:12)
+19 error canceled
+20 verbose cwd D:\tools_work\self-project-dev\ai_agent
+21 verbose os Windows_NT 10.0.26100
+22 verbose node v22.15.0
+23 verbose npm  v10.9.2
+24 verbose exit 1
+25 verbose code 1
+26 error A complete log of this run can be found in: D:\tools_work\self-project-dev\ai_agent\.npm-cache\_logs\2025-08-28T05_17_03_660Z-debug-0.log
